@@ -17,6 +17,19 @@ class AdService {
   bool _isAdShowing = false;
   GlobalKey<NavigatorState>? navigatorKey;
 
+  // Set this to false for production
+  static const bool useTestAds = true;
+
+  // Test IDs for Android
+  static const String testAndroidBannerId = 'ca-app-pub-3940256099942544/6300978111';
+  static const String testAndroidInterstitialId = 'ca-app-pub-3940256099942544/1033173712';
+  static const String testAndroidAppOpenId = 'ca-app-pub-3940256099942544/9257395915';
+
+  // Test IDs for iOS
+  static const String testIosBannerId = 'ca-app-pub-3940256099942544/2934735716';
+  static const String testIosInterstitialId = 'ca-app-pub-3940256099942544/4411468910';
+  static const String testIosAppOpenId = 'ca-app-pub-3940256099942544/5662855259';
+
   // IDs for Android
   static const String androidBannerId = 'ca-app-pub-5716551354866412/3117135380';
   static const String androidInterstitialId = 'ca-app-pub-5716551354866412/9376401917';
@@ -27,9 +40,20 @@ class AdService {
   static const String iosInterstitialId = 'ca-app-pub-5716551354866412/5803722482';
   static const String iosAppOpenId = 'ca-app-pub-5716551354866412/8063320241';
 
-  String get bannerAdUnitId => Platform.isAndroid ? androidBannerId : iosBannerId;
-  String get interstitialAdUnitId => Platform.isAndroid ? androidInterstitialId : iosInterstitialId;
-  String get appOpenAdUnitId => Platform.isAndroid ? androidAppOpenId : iosAppOpenId;
+  String get bannerAdUnitId {
+    if (useTestAds) return Platform.isAndroid ? testAndroidBannerId : testIosBannerId;
+    return Platform.isAndroid ? androidBannerId : iosBannerId;
+  }
+
+  String get interstitialAdUnitId {
+    if (useTestAds) return Platform.isAndroid ? testAndroidInterstitialId : testIosInterstitialId;
+    return Platform.isAndroid ? androidInterstitialId : iosInterstitialId;
+  }
+
+  String get appOpenAdUnitId {
+    if (useTestAds) return Platform.isAndroid ? testAndroidAppOpenId : testIosAppOpenId;
+    return Platform.isAndroid ? androidAppOpenId : iosAppOpenId;
+  }
 
   Future<void> init() async {
     if (Platform.isIOS) {
