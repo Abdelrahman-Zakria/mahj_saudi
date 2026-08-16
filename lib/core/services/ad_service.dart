@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'dart:developer' as dev;
 
 class AdService {
@@ -31,6 +32,13 @@ class AdService {
   String get appOpenAdUnitId => Platform.isAndroid ? androidAppOpenId : iosAppOpenId;
 
   Future<void> init() async {
+    if (Platform.isIOS) {
+      final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+      if (status == TrackingStatus.notDetermined) {
+        await AppTrackingTransparency.requestTrackingAuthorization();
+      }
+    }
+
     await MobileAds.instance.initialize();
     loadAppOpenAd(showAfterLoad: true);
     loadInterstitialAd();
