@@ -31,7 +31,7 @@ class ContentPage extends StatelessWidget {
   }
 }
 
-class ContentView extends StatelessWidget {
+class ContentView extends StatefulWidget {
   final EducationalNode? node;
   final String parentId;
   final String title;
@@ -39,14 +39,31 @@ class ContentView extends StatelessWidget {
   const ContentView({super.key, this.node, required this.parentId, required this.title});
 
   @override
+  State<ContentView> createState() => _ContentViewState();
+}
+
+class _ContentViewState extends State<ContentView> {
+  @override
+  void initState() {
+    super.initState();
+    // Show interstitial when arriving at a leaf screen (embedded PDF)
+    final pdfRes = widget.node?.resources.where((r) => r.type == 'pdf').firstOrNull;
+    if (pdfRes != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        GetIt.I<AdService>().showInterstitialAd(onAdDismissed: () {});
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final pdfRes = node?.resources.where((r) => r.type == 'pdf').firstOrNull;
+    final pdfRes = widget.node?.resources.where((r) => r.type == 'pdf').firstOrNull;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(node?.displayTitle ?? title),
+        title: Text(widget.node?.displayTitle ?? widget.title),
         actions: [
-          if (node != null) ...[
+          if (widget.node != null) ...[
             BlocBuilder<ContentCubit, ContentState>(
               buildWhen: (previous, current) => previous.isFavorite != current.isFavorite,
               builder: (context, state) {
@@ -54,7 +71,7 @@ class ContentView extends StatelessWidget {
                   icon: Icon(state.isFavorite ? Icons.favorite : Icons.favorite_border, color: Colors.red),
                   onPressed: () {
                     GetIt.I<AdService>().showInterstitialAd(
-                      onAdDismissed: () => context.read<ContentCubit>().toggleFavorite(node!),
+                      onAdDismissed: () => context.read<ContentCubit>().toggleFavorite(widget.node!),
                     );
                   },
                 );
@@ -66,7 +83,7 @@ class ContentView extends StatelessWidget {
                 onPressed: () async {
                   GetIt.I<AdService>().showInterstitialAd(
                     onAdDismissed: () async {
-                      await context.read<ContentCubit>().saveToLibrary(node!);
+                      await context.read<ContentCubit>().saveToLibrary(widget.node!);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text("تمت الإضافة إلى مكتبتي")),
@@ -85,8 +102,8 @@ class ContentView extends StatelessWidget {
           children: [
             if (pdfRes != null)
               Expanded(child: _buildEmbeddedPdf(pdfRes.url))
-            else if (node != null && node!.resources.isNotEmpty)
-              ResourceViewer(node: node!),
+            else if (widget.node != null && widget.node!.resources.isNotEmpty)
+              ResourceViewer(node: widget.node!),
             
             if (pdfRes == null)
               Expanded(
@@ -100,7 +117,7 @@ class ContentView extends StatelessWidget {
                     }
                     if (state is ContentLoaded) {
                       if (state.items.isEmpty) {
-                        if (node == null || node!.resources.isEmpty) {
+                        if (widget.node == null || widget.node!.resources.isEmpty) {
                           return const Center(child: Text("لا توجد محتويات حالياً"));
                         }
                         return const SizedBox();

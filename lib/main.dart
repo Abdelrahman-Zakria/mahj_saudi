@@ -17,6 +17,14 @@ import 'features/home/presentation/screens/home/home_page.dart';
 final sl = GetIt.instance;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+class AdNavigationObserver extends NavigatorObserver {
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    sl<AdService>().showInterstitialAd(onAdDismissed: () {});
+  }
+}
+
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
@@ -86,6 +94,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
+        navigatorObservers: [AdNavigationObserver()],
         title: 'منهجي السعودي',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,

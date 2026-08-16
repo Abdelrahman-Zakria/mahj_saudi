@@ -28,7 +28,7 @@ class AdService {
   // Test IDs for iOS
   static const String testIosBannerId = 'ca-app-pub-3940256099942544/2934735716';
   static const String testIosInterstitialId = 'ca-app-pub-3940256099942544/4411468910';
-  static const String testIosAppOpenId = 'ca-app-pub-3940256099942544/5662855259';
+  static const String testIosAppOpenId = 'ca-app-pub-3940256099942544/5575463023';
 
   // IDs for Android
   static const String androidBannerId = 'ca-app-pub-5716551354866412/3117135380';
@@ -73,8 +73,8 @@ class AdService {
     _periodicAdTimer?.cancel();
     _periodicAdTimer = Timer.periodic(const Duration(minutes: 3), (timer) {
       if (!_isAdShowing) {
-        dev.log("Triggering 3-minute periodic interstitial ad");
-        showInterstitialAd(onAdDismissed: () {});
+        dev.log("Triggering 3-minute periodic App Open ad");
+        showAppOpenAdIfAvailable();
       }
     });
   }
