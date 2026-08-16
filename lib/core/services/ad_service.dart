@@ -18,7 +18,7 @@ class AdService {
   GlobalKey<NavigatorState>? navigatorKey;
 
   // Set this to false for production
-  static const bool useTestAds = true;
+  static const bool useTestAds = false;
 
   // Test IDs for Android
   static const String testAndroidBannerId = 'ca-app-pub-3940256099942544/6300978111';
@@ -84,26 +84,8 @@ class AdService {
   }
 
   void _showErrorDialog(String type, dynamic error) {
-    if (!Platform.isIOS) return;
-    dev.log('Showing error dialog for $type');
-    final context = navigatorKey?.currentContext;
-    if (context != null) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Ad Error: $type'),
-          content: SingleChildScrollView(
-            child: Text(error.toString()),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-    }
+    // Disabled for production to prevent technical popups for users
+    dev.log('Ad Error ($type): ${error.toString()}');
   }
 
   // --- App Open Ad ---
