@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'dart:developer' as dev;
 
@@ -13,6 +14,7 @@ class AdService {
   bool _isInterstitialAdLoading = false;
   Timer? _periodicAdTimer;
   bool _isAdShowing = false;
+  GlobalKey<NavigatorState>? navigatorKey;
 
   // IDs for Android
   static const String androidBannerId = 'ca-app-pub-5716551354866412/3117135380';
@@ -49,6 +51,29 @@ class AdService {
     _periodicAdTimer?.cancel();
   }
 
+  void _showErrorDialog(String type, dynamic error) {
+    if (!Platform.isIOS) return;
+    dev.log('Showing error dialog for $type');
+    final context = navigatorKey?.currentContext;
+    if (context != null) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Ad Error: $type'),
+          content: SingleChildScrollView(
+            child: Text(error.toString()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   // --- App Open Ad ---
   void loadAppOpenAd({bool showAfterLoad = false}) {
     AppOpenAd.load(
@@ -64,6 +89,7 @@ class AdService {
         },
         onAdFailedToLoad: (error) {
           dev.log('AppOpenAd failed to load: $error');
+          _showErrorDialog('App Open Load', error);
         },
       ),
     );
@@ -91,6 +117,7 @@ class AdService {
         _isAdShowing = false;
         _appOpenAd = null;
         loadAppOpenAd();
+        _showErrorDialog('App Open Show', error);
       },
     );
     _appOpenAd!.show();
@@ -107,6 +134,7 @@ class AdService {
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
           dev.log('BannerAd failed to load: $error');
+          _showErrorDialog('Banner Load', error);
         },
       ),
     );
@@ -129,6 +157,7 @@ class AdService {
           dev.log('InterstitialAd failed to load: $error');
           _isInterstitialAdLoading = false;
           _interstitialAd = null;
+          _showErrorDialog('Interstitial Load', error);
         },
       ),
     );
@@ -164,6 +193,7 @@ class AdService {
         _interstitialAd = null;
         onAdDismissed();
         loadInterstitialAd();
+        _showErrorDialog('Interstitial Show', error);
       },
     );
     _interstitialAd!.show();

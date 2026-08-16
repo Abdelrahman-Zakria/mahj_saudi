@@ -15,6 +15,7 @@ import 'features/home/data/repositories/educational_repository_impl.dart';
 import 'features/home/presentation/screens/home/home_page.dart';
 
 final sl = GetIt.instance;
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,7 @@ void main() async {
   sl.registerLazySingleton(() => notificationService);
 
   final adService = AdService();
+  adService.navigatorKey = navigatorKey;
   await adService.init();
   sl.registerLazySingleton(() => adService);
   
@@ -83,6 +85,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         title: 'منهجي السعودي',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
