@@ -8,7 +8,10 @@ import Firebase
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    FirebaseApp.configure()
+    if let filePath = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+       let _ = NSDictionary(contentsOfFile: filePath) {
+        FirebaseApp.configure()
+    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
