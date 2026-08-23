@@ -35,14 +35,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _loadBannerAd() {
-    _bannerAd = GetIt.I<AdService>().createBannerAd()
-      ..load().then((_) {
-        if (mounted) {
-          setState(() {
-            _isBannerAdLoaded = true;
-          });
-        }
-      });
+    _bannerAd = GetIt.I<AdService>().createBannerAd();
+    _bannerAd?.load().then((_) {
+      if (mounted) {
+        setState(() {
+          _isBannerAdLoaded = true;
+        });
+      }
+    });
   }
 
   @override

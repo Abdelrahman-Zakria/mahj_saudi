@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'more_state.dart';
 import 'package:share_plus/share_plus.dart';
@@ -38,7 +39,10 @@ class MoreCubit extends Cubit<MoreState> {
   }
 
   Future<void> launchStore() async {
-    final Uri url = Uri.parse('https://play.google.com/store/apps/details?id=com.mnhaj.saudi');
+    final String urlString = Platform.isIOS
+        ? 'https://apps.apple.com/app/id6590637171'
+        : 'https://play.google.com/store/apps/details?id=com.mnhaj.saudi';
+    final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       // Handle error
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../../../../../core/services/ad_service.dart';
+import '../../../../../core/services/iap_service.dart';
 import '../exams/exams_page.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/services/local_storage_service.dart';
@@ -118,8 +119,26 @@ class MoreView extends StatelessWidget {
                         );
                       },
                     ),
+                    _buildItem(
+                      icon: Icons.restore_rounded,
+                      title: "استعادة المشتريات",
+                      subtitle: "استعد ميزة إزالة الإعلانات",
+                      onTap: () async {
+                        await GetIt.I<IapService>().restorePurchases();
+                      },
+                    ),
                     const SizedBox(height: 12),
-                    _buildRemoveAdsItem(),
+                    StreamBuilder<bool>(
+                      stream: GetIt.I<IapService>().adFreeStatusStream,
+                      initialData: GetIt.I<IapService>().isAdFree,
+                      builder: (context, snapshot) {
+                        final isAdFree = snapshot.data ?? false;
+                        if (isAdFree) {
+                          return _buildAdFreeItem();
+                        }
+                        return _buildRemoveAdsItem();
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -217,8 +236,8 @@ class MoreView extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            // Future: Implement In-App Purchase logic
+          onTap: () async {
+            await GetIt.I<IapService>().buyAdRemoval();
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -264,6 +283,55 @@ class MoreView extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdFreeItem() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.verified_rounded, color: Colors.green, size: 24),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "أنت تستمتع بتجربة بدون إعلانات",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    "شكراً لدعمك لنا!",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

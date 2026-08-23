@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'iap_service.dart';
 import 'dart:developer' as dev;
 
 class AdService {
@@ -56,11 +57,9 @@ class AdService {
   }
 
   Future<void> init() async {
-    if (Platform.isIOS) {
-      final status = await AppTrackingTransparency.trackingAuthorizationStatus;
-      if (status == TrackingStatus.notDetermined) {
-        await AppTrackingTransparency.requestTrackingAuthorization();
-      }
+    if (IapService().isAdFree) {
+      dev.log('User is ad-free, skipping MobileAds init');
+      return;
     }
 
     await MobileAds.instance.initialize();
@@ -70,11 +69,14 @@ class AdService {
   }
 
   void startPeriodicAds() {
+    if (IapService().isAdFree) return;
     _periodicAdTimer?.cancel();
     _periodicAdTimer = Timer.periodic(const Duration(minutes: 3), (timer) {
-      if (!_isAdShowing) {
+      if (!_isAdShowing && !IapService().isAdFree) {
         dev.log("Triggering 3-minute periodic App Open ad");
         showAppOpenAdIfAvailable();
+      } else if (IapService().isAdFree) {
+        timer.cancel();
       }
     });
   }
@@ -90,6 +92,7 @@ class AdService {
 
   // --- App Open Ad ---
   void loadAppOpenAd({bool showAfterLoad = false}) {
+    if (IapService().isAdFree) return;
     AppOpenAd.load(
       adUnitId: appOpenAdUnitId,
       request: const AdRequest(),
@@ -110,7 +113,7 @@ class AdService {
   }
 
   void showAppOpenAdIfAvailable() {
-    if (_isAdShowing) return;
+    if (_isAdShowing || IapService().isAdFree) return;
     if (_appOpenAd == null) {
       dev.log('AppOpenAd not ready, loading new one...');
       loadAppOpenAd();
@@ -138,7 +141,8 @@ class AdService {
   }
 
   // --- Banner Ad ---
-  BannerAd createBannerAd() {
+  BannerAd? createBannerAd() {
+    if (IapService().isAdFree) return null;
     return BannerAd(
       adUnitId: bannerAdUnitId,
       size: AdSize.banner,
@@ -156,6 +160,7 @@ class AdService {
 
   // --- Interstitial Ad ---
   void loadInterstitialAd() {
+    if (IapService().isAdFree) return;
     if (_isInterstitialAdLoading) return;
     _isInterstitialAdLoading = true;
     InterstitialAd.load(
@@ -178,7 +183,7 @@ class AdService {
   }
 
   void showInterstitialAd({required Function onAdDismissed}) {
-    if (_isAdShowing) {
+    if (_isAdShowing || IapService().isAdFree) {
       onAdDismissed();
       return;
     }

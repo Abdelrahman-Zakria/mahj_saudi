@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer' as dev;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart' as fcm;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -16,12 +17,19 @@ class NotificationService {
     final String timeZoneName = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(timeZoneName));
     
+    // FCM Initialization
+    await _initFirebaseMessaging();
+    
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('app_icon');
         
     const InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
-      iOS: DarwinInitializationSettings(),
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      ),
     );
     
     await flutterLocalNotificationsPlugin.initialize(
@@ -321,5 +329,76 @@ class NotificationService {
   Future<void> cancelAlarm(int id) async {
     await flutterLocalNotificationsPlugin.cancel(id);
     await flutterLocalNotificationsPlugin.cancel(id + 10000);
+  }
+
+  // --- Firebase Cloud Messaging ---
+
+  Future<void> _initFirebaseMessaging() async {
+    fcm.FirebaseMessaging messaging = fcm.FirebaseMessaging.instance;
+
+    // Request permissions (important for iOS and Android 13+)
+    fcm.NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == fcm.AuthorizationStatus.authorized) {
+      dev.log('User granted FCM permission');
+      
+      // Auto-subscribe to 'all_users' topic
+      try {
+        await messaging.subscribeToTopic('all_users');
+        dev.log('Subscribed to all_users topic');
+      } catch (e) {
+        dev.log('Error subscribing to all_users topic: $e');
+      }
+    } else {
+      dev.log('User declined or has not accepted FCM permission');
+    }
+
+    // Handle foreground messages
+    fcm.FirebaseMessaging.onMessage.listen((fcm.RemoteMessage message) {
+      dev.log('Got a message whilst in the foreground!');
+      dev.log('Message data: ${message.data}');
+
+      if (message.notification != null) {
+        dev.log('Message also contained a notification: ${message.notification}');
+        _showForegroundNotification(message.notification!);
+      }
+    });
+  }
+
+  Future<void> _showForegroundNotification(fcm.RemoteNotification notification) async {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+        'fcm_foreground_channel',
+        'إشعارات عامة',
+        channelDescription: 'إشعارات مستلمة أثناء استخدام التطبيق',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+      );
+    
+    const DarwinNotificationDetails iosPlatformChannelSpecifics =
+        DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      interruptionLevel: InterruptionLevel.critical,
+    );
+    
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: iosPlatformChannelSpecifics,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      notification.hashCode,
+      notification.title,
+      notification.body,
+      platformChannelSpecifics,
+    );
   }
 }
