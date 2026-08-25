@@ -346,6 +346,10 @@ class NotificationService {
     if (settings.authorizationStatus == fcm.AuthorizationStatus.authorized) {
       dev.log('User granted FCM permission');
       
+      // Get the token for debugging
+      String? token = await messaging.getToken();
+      dev.log('FCM Token: $token');
+      
       // Auto-subscribe to 'all_users' topic
       try {
         await messaging.subscribeToTopic('all_users');

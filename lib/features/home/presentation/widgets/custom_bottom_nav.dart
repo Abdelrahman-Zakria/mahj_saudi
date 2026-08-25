@@ -80,7 +80,12 @@ class CustomBottomNav extends StatelessWidget {
                     ],
                     border: Border.all(color: Colors.white, width: 4),
                   ),
-                  child: const Icon(Icons.home, color: Colors.white, size: 30),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/newLogo.jpeg',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -62,6 +62,18 @@ class AdService {
       return;
     }
 
+    // Listen for ad-free status changes
+    IapService().adFreeStatusStream.listen((isAdFree) {
+      if (isAdFree) {
+        _periodicAdTimer?.cancel();
+        _appOpenAd?.dispose();
+        _appOpenAd = null;
+        _interstitialAd?.dispose();
+        _interstitialAd = null;
+        dev.log('Ad-free enabled: Cleared all ads and timers');
+      }
+    });
+
     await MobileAds.instance.initialize();
     loadAppOpenAd(showAfterLoad: true);
     loadInterstitialAd();

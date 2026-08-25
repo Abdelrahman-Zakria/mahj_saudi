@@ -15,6 +15,7 @@ import 'core/services/local_storage_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/ad_service.dart';
 import 'core/services/iap_service.dart';
+import 'core/services/rate_service.dart';
 import 'features/home/data/repositories/educational_repository_impl.dart';
 import 'features/home/presentation/screens/home/home_page.dart';
 
@@ -102,6 +103,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    // Initialize Rate Dialog Timer (shows after 2 minutes)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      RateService().initRateTimer(navigatorKey.currentContext!);
+    });
   }
 
   @override
