@@ -1,4 +1,6 @@
-# Uncomment this line to define a global platform for your project
+# The next line is used by flutter config to locate the flutter root.
+# $FLUTTER_ROOT
+
 platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
@@ -11,19 +13,26 @@ project 'Runner', {
 }
 
 def flutter_root
+  # 1. Use environment variable if available (standard for Codemagic/CI)
+  return ENV['FLUTTER_ROOT'] if ENV['FLUTTER_ROOT'] && !ENV['FLUTTER_ROOT'].empty?
+
+  # 2. Fallback to parsing Generated.xcconfig with a robust regex
   generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
   unless File.exist?(generated_xcode_build_settings_path)
     raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get has been executed"
   end
 
   File.foreach(generated_xcode_build_settings_path) do |line|
-    matches = line.match(/\AFLUTTER_ROOT=(.*)\z/)
-    return matches[1].strip.gsub('"', '') if matches
+    # Matches FLUTTER_ROOT=path, FLUTTER_ROOT = path, or FLUTTER_ROOT="path"
+    matches = line.match(/\AFLUTTER_ROOT\s*=\s*(.*)\z/)
+    if matches
+      return matches[1].strip.gsub('"', '')
+    end
   end
   raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig and rerunning flutter pub get"
 end
 
-require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper.rb'), flutter_root)
+load File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper.rb'), flutter_root)
 
 target 'Runner' do
   use_frameworks!
@@ -37,7 +46,7 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
-      # Allow for Firebase and AdMob dependencies
+      # Required for Firebase and permission_handler to work correctly
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)', 'PERMISSION_NOTIFICATIONS=1']
     end
   end
