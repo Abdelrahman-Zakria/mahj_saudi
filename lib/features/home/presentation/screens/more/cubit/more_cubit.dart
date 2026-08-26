@@ -24,7 +24,7 @@ class MoreCubit extends Cubit<MoreState> {
   }
 
   void shareApp() {
-    const String appLink = 'https://apps.apple.com/sa/app/%D9%85%D9%86%D9%87%D8%AC%D9%8I-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A/id6801933753';
+    const String appLink = 'https://apps.apple.com/us/app/%D9%85%D9%86%D9%87%D8%AC%D9%8I-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A/id6801933753';
     Share.share('حمل تطبيق منهجي السعودي الآن واستمتع بكافة المناهج الدراسية: $appLink');
   }
 
@@ -40,9 +40,7 @@ class MoreCubit extends Cubit<MoreState> {
   }
 
   Future<void> launchStore() async {
-    final String urlString = Platform.isIOS
-        ? 'https://apps.apple.com/sa/app/%D9%85%D9%86%D9%87%D8%AC%D9%8I-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A/id6801933753'
-        : 'https://play.google.com/store/apps/details?id=com.mnhaj.saudi';
+    const String urlString = 'https://apps.apple.com/us/app/%D9%85%D9%86%D9%87%D8%AC%D9%8I-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A/id6801933753';
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       // Handle error

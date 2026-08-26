@@ -11,7 +11,7 @@ class RateService {
   RateService._internal();
 
   static const String _rateKey = 'has_rated_app';
-  static const String appStoreUrl = 'https://apps.apple.com/sa/app/%D9%85%D9%86%D9%87%D8%AC%D9%8I-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A/id6801933753';
+  static const String appStoreUrl = 'https://apps.apple.com/us/app/%D9%85%D9%86%D9%87%D8%AC%D9%8I-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A/id6801933753';
   static const String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.mnhaj.saudi';
 
   Future<void> initRateTimer(BuildContext context) async {

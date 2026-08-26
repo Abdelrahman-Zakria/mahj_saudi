@@ -57,11 +57,7 @@ class MoreView extends StatelessWidget {
                       title: "الاختبارات",
                       subtitle: "نماذج اختبارات لجميع المواد",
                       onTap: () {
-                        GetIt.I<AdService>().showInterstitialAd(
-                          onAdDismissed: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const ExamsPage()));
-                          },
-                        );
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const ExamsPage()));
                       },
                     ),
                     BlocBuilder<MoreCubit, MoreState>(
@@ -76,16 +72,12 @@ class MoreView extends StatelessWidget {
                             value: state.notificationsEnabled,
                             activeThumbColor: AppTheme.primaryGreen,
                             onChanged: (value) {
-                              GetIt.I<AdService>().showInterstitialAd(
-                                onAdDismissed: () => cubit.toggleNotifications(value),
-                              );
-                            },
-                          ),
-                          onTap: () {
-                            GetIt.I<AdService>().showInterstitialAd(
-                              onAdDismissed: () => cubit.toggleNotifications(!state.notificationsEnabled),
-                            );
+                            cubit.toggleNotifications(value);
                           },
+                        ),
+                        onTap: () {
+                          cubit.toggleNotifications(!state.notificationsEnabled);
+                        },
                         );
                       },
                     ),
@@ -94,9 +86,7 @@ class MoreView extends StatelessWidget {
                       title: "مشاركة التطبيق",
                       subtitle: "شارك الفائدة مع زملائك",
                       onTap: () {
-                        GetIt.I<AdService>().showInterstitialAd(
-                          onAdDismissed: () => cubit.shareApp(),
-                        );
+                        cubit.shareApp();
                       },
                     ),
                     _buildItem(
@@ -104,9 +94,7 @@ class MoreView extends StatelessWidget {
                       title: "اتصل بنا",
                       subtitle: "الدعم الفني والاستفسارات",
                       onTap: () {
-                        GetIt.I<AdService>().showInterstitialAd(
-                          onAdDismissed: () => cubit.launchEmail(),
-                        );
+                        cubit.launchEmail();
                       },
                     ),
                     _buildItem(
@@ -114,9 +102,7 @@ class MoreView extends StatelessWidget {
                       title: "قيمنا",
                       subtitle: "رأيك يهمنا لتطوير التطبيق",
                       onTap: () {
-                        GetIt.I<AdService>().showInterstitialAd(
-                          onAdDismissed: () => cubit.launchStore(),
-                        );
+                        cubit.launchStore();
                       },
                     ),
                     _buildItem(

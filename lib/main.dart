@@ -30,13 +30,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Handling a background message: ${message.messageId}");
 }
 
-class AdNavigationObserver extends NavigatorObserver {
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    super.didPop(route, previousRoute);
-    sl<AdService>().showInterstitialAd(onAdDismissed: () {});
-  }
-}
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -133,7 +126,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
-        navigatorObservers: [AdNavigationObserver()],
         title: 'منهجي السعودي',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,

@@ -46,9 +46,9 @@ class _ContentViewState extends State<ContentView> {
   @override
   void initState() {
     super.initState();
-    // Show interstitial when arriving at a leaf screen (embedded PDF)
-    final pdfRes = widget.node?.resources.where((r) => r.type == 'pdf').firstOrNull;
-    if (pdfRes != null) {
+    // Show interstitial when arriving at a leaf screen (embedded PDF or links)
+    final hasContent = widget.node?.resources.isNotEmpty ?? false;
+    if (hasContent) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         GetIt.I<AdService>().showInterstitialAd(onAdDismissed: () {});
       });
@@ -70,9 +70,7 @@ class _ContentViewState extends State<ContentView> {
                 return IconButton(
                   icon: Icon(state.isFavorite ? Icons.favorite : Icons.favorite_border, color: Colors.red),
                   onPressed: () {
-                    GetIt.I<AdService>().showInterstitialAd(
-                      onAdDismissed: () => context.read<ContentCubit>().toggleFavorite(widget.node!),
-                    );
+                    context.read<ContentCubit>().toggleFavorite(widget.node!);
                   },
                 );
               },
@@ -81,16 +79,12 @@ class _ContentViewState extends State<ContentView> {
               IconButton(
                 icon: const Icon(Icons.download),
                 onPressed: () async {
-                  GetIt.I<AdService>().showInterstitialAd(
-                    onAdDismissed: () async {
-                      await context.read<ContentCubit>().saveToLibrary(widget.node!);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("تمت الإضافة إلى مكتبتي")),
-                        );
-                      }
-                    },
-                  );
+                  await context.read<ContentCubit>().saveToLibrary(widget.node!);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("تمت الإضافة إلى مكتبتي")),
+                    );
+                  }
                 },
               ),
           ]

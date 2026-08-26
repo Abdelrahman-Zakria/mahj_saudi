@@ -41,8 +41,6 @@ class TimerCubit extends Cubit<TimerState> {
       final timerId = (DateTime.now().millisecondsSinceEpoch ~/ 1000) % 50000;
       final DateTime currentNow = DateTime.now();
       
-      // Trigger AD on adding alarm
-      GetIt.I<AdService>().showInterstitialAd(onAdDismissed: () {});
 
       if (startDt.isAfter(currentNow)) {
         await notifications.scheduleSystemAlarm(
@@ -72,8 +70,6 @@ class TimerCubit extends Cubit<TimerState> {
   Future<void> deleteTimer(int index) async {
     emit(TimerLoading(state.timers));
     try {
-      // Trigger AD on removing alarm
-      GetIt.I<AdService>().showInterstitialAd(onAdDismissed: () {});
 
       await storage.deleteTimer(index);
       final updatedTimers = storage.getTimers();

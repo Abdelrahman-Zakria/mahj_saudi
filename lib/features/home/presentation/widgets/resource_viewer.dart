@@ -81,15 +81,11 @@ class ResourceViewer extends StatelessWidget {
       label: Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
       backgroundColor: color,
       onPressed: () {
-        GetIt.I<AdService>().showInterstitialAd(
-          onAdDismissed: () {
-            if (res.type == 'pdf') {
-              _openPdf(context, res.url);
-            } else {
-              _launchURL(context, res.url);
-            }
-          },
-        );
+        if (res.type == 'pdf') {
+          _openPdf(context, res.url);
+        } else {
+          _launchURL(context, res.url);
+        }
       },
     );
   }
