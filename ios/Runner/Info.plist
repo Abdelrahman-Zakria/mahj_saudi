@@ -84,6 +84,12 @@
 		<string>ca-app-pub-5716551354866412~2079385888</string>
 		<key>NSUserTrackingUsageDescription</key>
 		<string>هذا المعرف سيستخدم لتقديم إعلانات مخصصة لك.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>نحتاج للوصول إلى موقعك لتحسين تجربة المستخدم وتقديم محتوى محلي.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>نحتاج للوصول إلى الميكروفون لتشغيل المنبهات والتنبيهات الصوتية.</string>
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 		<key>SKAdNetworkItems</key>
 		<array>
 			<dict>
