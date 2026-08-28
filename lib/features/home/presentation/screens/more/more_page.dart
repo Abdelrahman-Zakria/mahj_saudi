@@ -115,14 +115,40 @@ class MoreView extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     StreamBuilder<bool>(
-                      stream: GetIt.I<IapService>().adFreeStatusStream,
-                      initialData: GetIt.I<IapService>().isAdFree,
-                      builder: (context, snapshot) {
-                        final isAdFree = snapshot.data ?? false;
-                        if (isAdFree) {
-                          return _buildAdFreeItem();
-                        }
-                        return _buildRemoveAdsItem();
+                      stream: GetIt.I<IapService>().isLoadingStream,
+                      initialData: false,
+                      builder: (context, loadingSnapshot) {
+                        final isLoading = loadingSnapshot.data ?? false;
+                        
+                        return StreamBuilder<bool>(
+                          stream: GetIt.I<IapService>().adFreeStatusStream,
+                          initialData: GetIt.I<IapService>().isAdFree,
+                          builder: (context, adFreeSnapshot) {
+                            final isAdFree = adFreeSnapshot.data ?? false;
+                            
+                            if (isAdFree) {
+                              return _buildAdFreeItem();
+                            }
+                            
+                            return Stack(
+                              children: [
+                                _buildRemoveAdsItem(),
+                                if (isLoading)
+                                  Positioned.fill(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black26,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        );
                       },
                     ),
                   ],

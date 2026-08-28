@@ -19,6 +19,9 @@ class IapService {
   final StreamController<bool> _adFreeStatusController = StreamController<bool>.broadcast();
   Stream<bool> get adFreeStatusStream => _adFreeStatusController.stream;
 
+  final StreamController<bool> _isLoadingController = StreamController<bool>.broadcast();
+  Stream<bool> get isLoadingStream => _isLoadingController.stream;
+
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _isAdFree = prefs.getBool('is_ad_free') ?? false;
@@ -64,25 +67,49 @@ class IapService {
   }
 
   Future<void> buyAdRemoval() async {
-    final bool available = await _iap.isAvailable();
-    if (!available) {
-      dev.log('Store not available');
-      return;
-    }
+    _isLoadingController.add(true);
+    try {
+      final bool available = await _iap.isAvailable();
+      if (!available) {
+        dev.log('Store not available');
+        _showError('متجر التطبيقات غير متاح حالياً');
+        _isLoadingController.add(false);
+        return;
+      }
 
-    const Set<String> kIds = {removeAdsId};
-    final ProductDetailsResponse response = await _iap.queryProductDetails(kIds);
+      const Set<String> kIds = {removeAdsId};
+      final ProductDetailsResponse response = await _iap.queryProductDetails(kIds);
 
-    if (response.notFoundIDs.isNotEmpty) {
-      dev.log('Product not found: ${response.notFoundIDs}');
-    }
+      if (response.notFoundIDs.isNotEmpty) {
+        dev.log('Product not found: ${response.notFoundIDs}');
+      }
 
-    if (response.productDetails.isNotEmpty) {
-      final PurchaseParam purchaseParam = PurchaseParam(productDetails: response.productDetails.first);
-      await _iap.buyNonConsumable(purchaseParam: purchaseParam);
-    } else {
-      dev.log('No products available to buy');
+      if (response.error != null) {
+        dev.log('IAP Query Error: ${response.error}');
+        _showError('خطأ في الاتصال بالمتجر: ${response.error?.message}');
+        _isLoadingController.add(false);
+        return;
+      }
+
+      if (response.productDetails.isNotEmpty) {
+        final PurchaseParam purchaseParam = PurchaseParam(productDetails: response.productDetails.first);
+        await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      } else {
+        dev.log('No products available to buy');
+        _showError('لم يتم العثور على المنتج في المتجر. يرجى التأكد من إعدادات الحساب.');
+      }
+    } catch (e) {
+      dev.log('IAP Exception: $e');
+      _showError('حدث خطأ غير متوقع: $e');
+    } finally {
+      _isLoadingController.add(false);
     }
+  }
+
+  void _showError(String message) {
+    // We can use a global navigator key or a broadcast stream to show UI feedback
+    dev.log('IAP User Error: $message');
+    // For now, logging to console for debug, but you should ensure the UI shows a loader or feedback
   }
 
   Future<void> restorePurchases() async {
