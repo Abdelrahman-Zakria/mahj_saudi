@@ -41,126 +41,136 @@ class MoreView extends StatelessWidget {
         foregroundColor: Colors.white,
         centerTitle: true,
       ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildProfileHeader(),
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    _buildItem(
-                      icon: Icons.edit_note_rounded,
-                      title: "الاختبارات",
-                      subtitle: "نماذج اختبارات لجميع المواد",
-                      onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const ExamsPage()));
-                      },
-                    ),
-                    BlocBuilder<MoreCubit, MoreState>(
-                      builder: (context, state) {
-                        return _buildItem(
-                          icon: state.notificationsEnabled 
-                            ? Icons.notifications_active_outlined 
-                            : Icons.notifications_off_outlined,
-                          title: "الاشعارات",
-                          subtitle: state.notificationsEnabled ? "مفعلة" : "معطلة",
-                          trailing: Switch(
-                            value: state.notificationsEnabled,
-                            activeThumbColor: AppTheme.primaryGreen,
-                            onChanged: (value) {
-                            cubit.toggleNotifications(value);
-                          },
-                        ),
+      body: BlocListener<MoreCubit, MoreState>(
+        listener: (context, state) {
+          // If you decide to add state-based feedback in the future
+        },
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildProfileHeader(),
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      _buildItem(
+                        icon: Icons.edit_note_rounded,
+                        title: "الاختبارات",
+                        subtitle: "نماذج اختبارات لجميع المواد",
                         onTap: () {
-                          cubit.toggleNotifications(!state.notificationsEnabled);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const ExamsPage()));
                         },
-                        );
-                      },
-                    ),
-                    _buildItem(
-                      icon: Icons.share_rounded,
-                      title: "مشاركة التطبيق",
-                      subtitle: "شارك الفائدة مع زملائك",
-                      onTap: () {
-                        cubit.shareApp();
-                      },
-                    ),
-                    _buildItem(
-                      icon: Icons.contact_support_rounded,
-                      title: "اتصل بنا",
-                      subtitle: "الدعم الفني والاستفسارات",
-                      onTap: () {
-                        cubit.launchEmail();
-                      },
-                    ),
-                    _buildItem(
-                      icon: Icons.star_rounded,
-                      title: "قيمنا",
-                      subtitle: "رأيك يهمنا لتطوير التطبيق",
-                      onTap: () {
-                        cubit.launchStore();
-                      },
-                    ),
-                    _buildItem(
-                      icon: Icons.restore_rounded,
-                      title: "استعادة المشتريات",
-                      subtitle: "استعد ميزة إزالة الإعلانات",
-                      onTap: () async {
-                        await GetIt.I<IapService>().restorePurchases();
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    StreamBuilder<bool>(
-                      stream: GetIt.I<IapService>().isLoadingStream,
-                      initialData: false,
-                      builder: (context, loadingSnapshot) {
-                        final isLoading = loadingSnapshot.data ?? false;
-                        
-                        return StreamBuilder<bool>(
-                          stream: GetIt.I<IapService>().adFreeStatusStream,
-                          initialData: GetIt.I<IapService>().isAdFree,
-                          builder: (context, adFreeSnapshot) {
-                            final isAdFree = adFreeSnapshot.data ?? false;
-                            
-                            if (isAdFree) {
-                              return _buildAdFreeItem();
-                            }
-                            
-                            return Stack(
-                              children: [
-                                _buildRemoveAdsItem(),
-                                if (isLoading)
-                                  Positioned.fill(
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.black26,
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: const Center(
-                                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                      BlocBuilder<MoreCubit, MoreState>(
+                        builder: (context, state) {
+                          return _buildItem(
+                            icon: state.notificationsEnabled 
+                              ? Icons.notifications_active_outlined 
+                              : Icons.notifications_off_outlined,
+                            title: "الاشعارات",
+                            subtitle: state.notificationsEnabled ? "مفعلة" : "معطلة",
+                            trailing: Switch(
+                              value: state.notificationsEnabled,
+                              activeThumbColor: AppTheme.primaryGreen,
+                              onChanged: (value) {
+                              cubit.toggleNotifications(value);
+                            },
+                          ),
+                          onTap: () {
+                            cubit.toggleNotifications(!state.notificationsEnabled);
+                          },
+                          );
+                        },
+                      ),
+                      _buildItem(
+                        icon: Icons.share_rounded,
+                        title: "مشاركة التطبيق",
+                        subtitle: "شارك الفائدة مع زملائك",
+                        onTap: () {
+                          cubit.shareApp();
+                        },
+                      ),
+                      _buildItem(
+                        icon: Icons.contact_support_rounded,
+                        title: "اتصل بنا",
+                        subtitle: "الدعم الفني والاستفسارات",
+                        onTap: () {
+                          cubit.launchEmail();
+                        },
+                      ),
+                      _buildItem(
+                        icon: Icons.star_rounded,
+                        title: "قيمنا",
+                        subtitle: "رأيك يهمنا لتطوير التطبيق",
+                        onTap: () {
+                          cubit.launchStore();
+                        },
+                      ),
+                      _buildItem(
+                        icon: Icons.restore_rounded,
+                        title: "استعادة المشتريات",
+                        subtitle: "استعد ميزة إزالة الإعلانات",
+                        onTap: () async {
+                          await GetIt.I<IapService>().restorePurchases();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("تم بدء استعادة المشتريات...")),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      StreamBuilder<bool>(
+                        stream: GetIt.I<IapService>().isLoadingStream,
+                        initialData: false,
+                        builder: (context, loadingSnapshot) {
+                          final isLoading = loadingSnapshot.data ?? false;
+                          
+                          return StreamBuilder<bool>(
+                            stream: GetIt.I<IapService>().adFreeStatusStream,
+                            initialData: GetIt.I<IapService>().isAdFree,
+                            builder: (context, adFreeSnapshot) {
+                              final isAdFree = adFreeSnapshot.data ?? false;
+                              
+                              if (isAdFree) {
+                                return _buildAdFreeItem();
+                              }
+                              
+                              return Stack(
+                                children: [
+                                  _buildRemoveAdsItem(),
+                                  if (isLoading)
+                                    Positioned.fill(
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black26,
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        child: const Center(
+                                          child: CircularProgressIndicator(color: Colors.white),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ],
+                                ],
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 40),
-              const Text(
-                "الإصدار 1.0.0",
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 40),
+                const Text(
+                  "الإصدار 1.0.1",
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
