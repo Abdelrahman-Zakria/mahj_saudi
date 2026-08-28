@@ -9,6 +9,7 @@ import 'package:get_it/get_it.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:alarm/alarm.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/local_storage_service.dart';
@@ -27,13 +28,17 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // If you're going to use other Firebase services in the background, such as Firestore,
   // make sure you call `initializeApp` before using other Firebase services.
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print("Handling a background message: ${message.messageId}");
+  //print("Handling a background message: ${message.messageId}");
 }
 
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
+  if (Platform.isIOS) {
+    InAppPurchaseStoreKitPlatform.enableStoreKit1();
+  }
 
   await Alarm.init();
   

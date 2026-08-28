@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import '../../../../../core/services/ad_service.dart';
 import '../../../../../core/services/iap_service.dart';
 import '../exams/exams_page.dart';
 import '../../../../../core/theme/app_theme.dart';

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:get_it/get_it.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/services/ad_service.dart';
 import '../../domain/entities/educational_node.dart';
 import '../screens/pdf_viewer/pdf_viewer_page.dart';
 

@@ -1,8 +1,5 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
-import 'package:in_app_purchase_storekit/store_kit_2_connection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as dev;
 
@@ -28,20 +25,6 @@ class IapService {
     final prefs = await SharedPreferences.getInstance();
     _isAdFree = prefs.getBool('is_ad_free') ?? false;
     _adFreeStatusController.add(_isAdFree);
-
-    // --- iOS Specific Configuration ---
-    if (Platform.isIOS) {
-      try {
-        final InAppPurchaseStoreKitPlatform iosPlatform = 
-            InAppPurchasePlatform.instance as InAppPurchaseStoreKitPlatform;
-        // Fallback to StoreKit 1 if StoreKit 2 is not working as expected
-        // Version 3.3.0 uses StoreKit 2 by default
-        dev.log('IAP: Forcing StoreKit 1 for compatibility');
-        await iosPlatform.setTransactionObserver(SKPaymentQueueWrapper());
-      } catch (e) {
-        dev.log('IAP: Error setting iOS platform config: $e');
-      }
-    }
 
     final Stream<List<PurchaseDetails>> purchaseUpdated = _iap.purchaseStream;
     _subscription = purchaseUpdated.listen((purchaseDetailsList) {
@@ -143,8 +126,6 @@ class IapService {
 
   void _showError(String message) {
     dev.log('IAP User Error: $message');
-    // Error logic handled by UI listening to streams if needed, 
-    // or through a global messenger if available.
   }
 
   Future<void> restorePurchases() async {
@@ -164,4 +145,3 @@ class IapService {
     _isLoadingController.close();
   }
 }
-
