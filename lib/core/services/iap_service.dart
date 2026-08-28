@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as dev;
+import '../../main.dart';
 
 class IapService {
   static final IapService _instance = IapService._internal();
@@ -32,31 +35,30 @@ class IapService {
     }, onDone: () {
       _subscription.cancel();
     }, onError: (error) {
-      dev.log('IAP Stream Error: $error');
-      _showError('خطأ في معالجة المشتريات: $error');
+      dev.log('IAP Global Stream Error: $error');
+      _showError('خطأ في الاتصال بمتجر آبل');
     });
   }
 
   Future<void> _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) async {
     for (var purchaseDetails in purchaseDetailsList) {
-      dev.log('IAP: Purchase update received: ${purchaseDetails.productID} - ${purchaseDetails.status}');
+      dev.log('IAP Event: ${purchaseDetails.productID} -> ${purchaseDetails.status}');
       
       if (purchaseDetails.status == PurchaseStatus.pending) {
-        dev.log('IAP: Purchase pending...');
         _isLoadingController.add(true);
       } else if (purchaseDetails.status == PurchaseStatus.error) {
-        dev.log('IAP: Purchase error: ${purchaseDetails.error}');
+        dev.log('IAP Error Object: ${purchaseDetails.error}');
         _isLoadingController.add(false);
-        _showError('حدث خطأ أثناء الشراء: ${purchaseDetails.error?.message}');
+        _showError('فشلت العملية: ${purchaseDetails.error?.message ?? "خطأ غير معروف"}');
       } else if (purchaseDetails.status == PurchaseStatus.canceled) {
-        dev.log('IAP: Purchase canceled by user');
         _isLoadingController.add(false);
+        dev.log('IAP: User canceled');
       } else if (purchaseDetails.status == PurchaseStatus.purchased || 
                  purchaseDetails.status == PurchaseStatus.restored) {
         
-        dev.log('IAP: Purchase successful or restored: ${purchaseDetails.productID}');
         if (purchaseDetails.productID == removeAdsId) {
           await setAdFree(true);
+          _showSuccess('تم تفعيل النسخة الاحترافية وإزالة الإعلانات!');
         }
 
         if (purchaseDetails.pendingCompletePurchase) {
@@ -72,70 +74,94 @@ class IapService {
     await prefs.setBool('is_ad_free', status);
     _isAdFree = status;
     _adFreeStatusController.add(status);
-    dev.log('Ad-free status updated to: $status');
   }
 
   Future<void> buyAdRemoval() async {
     _isLoadingController.add(true);
-    dev.log('IAP: Initiating buyAdRemoval for $removeAdsId');
+    dev.log('IAP: Manual Buy Request for $removeAdsId');
+
+    // Safety timeout to prevent stuck loader if Apple sheet fails to show
+    Timer(const Duration(seconds: 25), () {
+      _isLoadingController.add(false);
+    });
     
     try {
       final bool available = await _iap.isAvailable();
       if (!available) {
-        dev.log('IAP: Store not available');
-        _showError('متجر التطبيقات غير متاح حالياً');
+        dev.log('IAP: isAvailable() returned false');
+        _showError('خدمة الشراء غير متاحة حالياً على هذا الجهاز');
         _isLoadingController.add(false);
         return;
       }
 
+      dev.log('IAP: Querying $removeAdsId...');
       const Set<String> kIds = {removeAdsId};
-      dev.log('IAP: Querying product details for $removeAdsId');
       final ProductDetailsResponse response = await _iap.queryProductDetails(kIds);
-
-      if (response.notFoundIDs.isNotEmpty) {
-        dev.log('IAP: Product not found in store: ${response.notFoundIDs}');
-      }
 
       if (response.error != null) {
         dev.log('IAP Query Error: ${response.error}');
-        _showError('خطأ في الاتصال بالمتجر: ${response.error?.message}');
+        _showError('تعذر الاتصال بمتجر التطبيقات');
         _isLoadingController.add(false);
         return;
       }
 
-      if (response.productDetails.isNotEmpty) {
-        final ProductDetails productDetails = response.productDetails.first;
-        dev.log('IAP: Product found: ${productDetails.title} - ${productDetails.price}');
-        
-        final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
-        
-        // Use non-consumable for "Remove Ads"
-        dev.log('IAP: Calling buyNonConsumable');
-        await _iap.buyNonConsumable(purchaseParam: purchaseParam);
-      } else {
-        dev.log('IAP: No products available to buy (empty list returned)');
-        _showError('لم يتم العثور على المنتج في المتجر. يرجى التأكد من إعدادات الحساب وتوفر الإنترنت.');
+      if (response.productDetails.isEmpty) {
+        dev.log('IAP Error: Product details list is empty. Not found IDs: ${response.notFoundIDs}');
+        _showError('لم يتم العثور على المنتج في المتجر. يرجى المحاولة لاحقاً.');
         _isLoadingController.add(false);
+        return;
       }
+
+      final ProductDetails productDetails = response.productDetails.first;
+      dev.log('IAP: Product found! Price: ${productDetails.price}. Showing sheet...');
+      
+      final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
+      
+      // On iOS, this triggers the native system dialog
+      await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      
     } catch (e) {
-      dev.log('IAP Exception in buyAdRemoval: $e');
-      _showError('حدث خطأ غير متوقع: $e');
+      dev.log('IAP Exception: $e');
+      _showError('حدث خطأ تقني: $e');
       _isLoadingController.add(false);
     }
   }
 
   void _showError(String message) {
-    dev.log('IAP User Error: $message');
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message, textAlign: TextAlign.right, style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  void _showSuccess(String message) {
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message, textAlign: TextAlign.right, style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
   }
 
   Future<void> restorePurchases() async {
-    dev.log('IAP: Initiating restorePurchases');
     _isLoadingController.add(true);
     try {
+      dev.log('IAP: Requesting restore...');
       await _iap.restorePurchases();
     } catch (e) {
       dev.log('IAP Restore Error: $e');
       _isLoadingController.add(false);
+      _showError('تعذر استعادة المشتريات حالياً');
     }
   }
 
