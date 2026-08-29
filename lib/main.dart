@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get_it/get_it.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:alarm/alarm.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
@@ -33,50 +33,47 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 
 void main() async {
-  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  WidgetsFlutterBinding.ensureInitialized();
 
   if (Platform.isIOS) {
     InAppPurchaseStoreKitPlatform.enableStoreKit1();
   }
 
-  await Alarm.init();
-  
+  // 1. Initialize essential core services first (Fast)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  // Set the background messaging handler early on, as a named top-level function
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
+  
+  await Alarm.init();
   final prefs = await SharedPreferences.getInstance();
   
-  // Register Services
+  // 2. Register all services in GetIt immediately
   sl.registerLazySingleton(() => LocalStorageService(prefs));
+  
   final notificationService = NotificationService();
-  await notificationService.init();
   sl.registerLazySingleton(() => notificationService);
 
   final iapService = IapService();
-  await iapService.init();
   sl.registerLazySingleton(() => iapService);
 
   final adService = AdService();
   adService.navigatorKey = navigatorKey;
-  await adService.init();
   sl.registerLazySingleton(() => adService);
   
-  // Register Repository
   sl.registerLazySingleton(() => EducationalRepositoryImpl(FirebaseFirestore.instance));
 
+  // 3. Start the app immediately to remove the native splash screen
   runApp(const MyApp());
   
-  // Remove splash after initialization
-  FlutterNativeSplash.remove();
+  // 4. Initialize heavy/blocking services in the background
+  unawaited(notificationService.init());
+  unawaited(iapService.init());
+  unawaited(adService.init());
 
-  // Request App Tracking Transparency for iOS
+  // Request App Tracking Transparency for iOS after a short delay
   if (Platform.isIOS) {
-    Future.delayed(const Duration(milliseconds: 1000), () async {
+    unawaited(Future.delayed(const Duration(milliseconds: 2000), () async {
       try {
         final status = await AppTrackingTransparency.trackingAuthorizationStatus;
         if (status == TrackingStatus.notDetermined) {
@@ -85,7 +82,7 @@ void main() async {
       } catch (e) {
         debugPrint("Error requesting ATT: $e");
       }
-    });
+    }));
   }
 }
 
