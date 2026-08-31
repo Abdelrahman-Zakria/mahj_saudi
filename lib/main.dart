@@ -8,7 +8,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get_it/get_it.dart';
 import 'package:alarm/alarm.dart';
-import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
@@ -70,20 +69,6 @@ void main() async {
   unawaited(notificationService.init());
   unawaited(iapService.init());
   unawaited(adService.init());
-
-  // Request App Tracking Transparency for iOS after a short delay
-  if (Platform.isIOS) {
-    unawaited(Future.delayed(const Duration(milliseconds: 2000), () async {
-      try {
-        final status = await AppTrackingTransparency.trackingAuthorizationStatus;
-        if (status == TrackingStatus.notDetermined) {
-          await AppTrackingTransparency.requestTrackingAuthorization();
-        }
-      } catch (e) {
-        debugPrint("Error requesting ATT: $e");
-      }
-    }));
-  }
 }
 
 class MyApp extends StatefulWidget {

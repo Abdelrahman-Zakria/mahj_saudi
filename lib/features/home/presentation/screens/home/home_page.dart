@@ -122,7 +122,13 @@ class _HomeContentState extends State<_HomeContent> {
           leading: Builder(
             builder: (context) => IconButton(
               icon: const Icon(Icons.share), 
-              onPressed: () => context.read<HomeCubit>().shareApp(),
+              onPressed: () {
+                final box = context.findRenderObject() as RenderBox?;
+                final rect = box != null 
+                    ? box.localToGlobal(Offset.zero) & box.size 
+                    : null;
+                context.read<HomeCubit>().shareApp(sharePositionOrigin: rect);
+              },
             ),
           ),
         ),

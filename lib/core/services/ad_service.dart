@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'iap_service.dart';
 import 'dart:developer' as dev;
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 
 class AdService {
   static final AdService _instance = AdService._internal();
@@ -59,6 +60,22 @@ class AdService {
     if (IapService().isAdFree) {
       dev.log('User is ad-free, skipping MobileAds init');
       return;
+    }
+
+    // Request Tracking Transparency for iOS before initializing Ads
+    if (Platform.isIOS) {
+      try {
+        // Wait a bit for the app to be stable
+        await Future.delayed(const Duration(milliseconds: 1500));
+        var status = await AppTrackingTransparency.trackingAuthorizationStatus;
+        if (status == TrackingStatus.notDetermined) {
+          dev.log('Requesting ATT authorization...');
+          status = await AppTrackingTransparency.requestTrackingAuthorization();
+          dev.log('ATT authorization status: $status');
+        }
+      } catch (e) {
+        dev.log('Error requesting ATT: $e');
+      }
     }
 
     // Listen for ad-free status changes

@@ -39,6 +39,20 @@ class MoreView extends StatelessWidget {
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
         centerTitle: true,
+        actions: [
+          Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () {
+                final box = context.findRenderObject() as RenderBox?;
+                final rect = box != null 
+                    ? box.localToGlobal(Offset.zero) & box.size 
+                    : null;
+                context.read<MoreCubit>().shareApp(sharePositionOrigin: rect);
+              },
+            ),
+          ),
+        ],
       ),
       body: BlocListener<MoreCubit, MoreState>(
         listener: (context, state) {
@@ -84,13 +98,19 @@ class MoreView extends StatelessWidget {
                           );
                         },
                       ),
-                      _buildItem(
-                        icon: Icons.share_rounded,
-                        title: "مشاركة التطبيق",
-                        subtitle: "شارك الفائدة مع زملائك",
-                        onTap: () {
-                          cubit.shareApp();
-                        },
+                      Builder(
+                        builder: (context) => _buildItem(
+                          icon: Icons.share_rounded,
+                          title: "مشاركة التطبيق",
+                          subtitle: "شارك الفائدة مع زملائك",
+                          onTap: () {
+                            final box = context.findRenderObject() as RenderBox?;
+                            final rect = box != null 
+                                ? box.localToGlobal(Offset.zero) & box.size 
+                                : null;
+                            cubit.shareApp(sharePositionOrigin: rect);
+                          },
+                        ),
                       ),
                       _buildItem(
                         icon: Icons.contact_support_rounded,

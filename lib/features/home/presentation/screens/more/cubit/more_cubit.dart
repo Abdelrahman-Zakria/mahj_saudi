@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:ui';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'more_state.dart';
 import 'package:share_plus/share_plus.dart';
@@ -22,9 +24,17 @@ class MoreCubit extends Cubit<MoreState> {
     emit(MoreUpdated(notificationsEnabled: enabled));
   }
 
-  void shareApp() {
-    const String appLink = 'https://apps.apple.com/us/app/%D9%85%D9%86%D9%87%D8%AC%D9%8I-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A/id6801933753';
-    Share.share('حمل تطبيق منهجي السعودي الآن واستمتع بكافة المناهج الدراسية: $appLink');
+  void shareApp({Rect? sharePositionOrigin}) {
+    const String iosLink = 'https://apps.apple.com/us/app/%D9%85%D9%86%D9%87%D8%AC%D9%8I-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A/id6801933753';
+    const String androidLink = 'https://play.google.com/store/apps/details?id=com.mo.mahj';
+    
+    final String link = Platform.isIOS ? iosLink : androidLink;
+    final String message = 'حمل تطبيق منهجي السعودي الآن واستمتع بكافة المناهج الدراسية مجاناً!\n\n$link';
+    
+    Share.share(
+      message,
+      sharePositionOrigin: sharePositionOrigin,
+    );
   }
 
   Future<void> launchEmail() async {
@@ -39,7 +49,10 @@ class MoreCubit extends Cubit<MoreState> {
   }
 
   Future<void> launchStore() async {
-    const String urlString = 'https://apps.apple.com/us/app/%D9%85%D9%86%D9%87%D8%AC%D9%8I-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A/id6801933753';
+    const String iosLink = 'https://apps.apple.com/us/app/%D9%85%D9%86%D9%87%D8%AC%D9%8I-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A/id6801933753';
+    const String androidLink = 'https://play.google.com/store/apps/details?id=com.mo.mahj';
+    
+    final String urlString = Platform.isIOS ? iosLink : androidLink;
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       // Handle error
