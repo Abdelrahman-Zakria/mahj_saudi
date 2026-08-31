@@ -65,10 +65,30 @@ void main() async {
   // 3. Start the app immediately to remove the native splash screen
   runApp(const MyApp());
   
-  // 4. Initialize heavy/blocking services in the background
-  unawaited(notificationService.init());
-  unawaited(iapService.init());
-  unawaited(adService.init());
+  // 4. Initialize heavy/blocking services in a specific sequence to avoid dialog conflicts
+  _initializeBackgroundServices(notificationService, iapService, adService);
+}
+
+Future<void> _initializeBackgroundServices(
+  NotificationService notificationService,
+  IapService iapService,
+  AdService adService,
+) async {
+  // Wait a small moment for the UI to be fully rendered
+  await Future.delayed(const Duration(milliseconds: 800));
+
+  // 1. Initialize notifications first (triggers Notification permission dialog)
+  await notificationService.init();
+
+  // 2. Wait a bit after the first dialog is handled before showing the next one
+  // This ensures iOS doesn't suppress the App Tracking Transparency dialog
+  await Future.delayed(const Duration(milliseconds: 1200));
+
+  // 3. Initialize Ads (triggers App Tracking Transparency dialog internally)
+  await adService.init();
+
+  // 4. Initialize IAP
+  await iapService.init();
 }
 
 class MyApp extends StatefulWidget {
