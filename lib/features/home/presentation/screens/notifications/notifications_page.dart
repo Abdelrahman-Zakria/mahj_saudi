@@ -4,8 +4,10 @@ import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart' as intl;
 import '../../../../../../core/services/local_storage_service.dart';
 import '../../../../../../core/theme/app_theme.dart';
+import 'package:mahj_saudi/core/services/ad_service.dart';
 import 'cubit/notifications_cubit.dart';
 import 'cubit/notifications_state.dart';
+import 'notification_detail_page.dart';
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({super.key});
@@ -91,6 +93,17 @@ class NotificationsView extends StatelessWidget {
                       ],
                     ),
                     child: ListTile(
+                      onTap: () {
+                        // Show App Open Ad when opening notification detail
+                        GetIt.I<AdService>().showAppOpenAdIfAvailable();
+                        
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => NotificationDetailPage(notification: item),
+                          ),
+                        );
+                      },
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       leading: Container(
                         padding: const EdgeInsets.all(10),
@@ -108,7 +121,12 @@ class NotificationsView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 4),
-                          Text(item['body'] ?? '', style: const TextStyle(color: AppTheme.textDark)),
+                          Text(
+                            item['body'] ?? '', 
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: AppTheme.textDark),
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             formattedDate,

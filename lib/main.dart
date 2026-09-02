@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -27,7 +28,31 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // If you're going to use other Firebase services in the background, such as Firestore,
   // make sure you call `initializeApp` before using other Firebase services.
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  //print("Handling a background message: ${message.messageId}");
+  
+  if (message.notification != null) {
+    final prefs = await SharedPreferences.getInstance();
+    final String? data = prefs.getString('notifications_history');
+    List history = [];
+    if (data != null) {
+      try { history = jsonDecode(data); } catch (_) {}
+    }
+    
+    // Check if already exists
+    final bool alreadyExists = history.any((e) => 
+      e['title'] == message.notification!.title && 
+      e['body'] == message.notification!.body
+    );
+    
+    if (!alreadyExists) {
+      history.insert(0, {
+        'title': message.notification!.title,
+        'body': message.notification!.body,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+      if (history.length > 50) history.removeLast();
+      await prefs.setString('notifications_history', jsonEncode(history));
+    }
+  }
 }
 
 

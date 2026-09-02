@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:developer' as dev;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart' as fcm;
@@ -7,6 +8,9 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:alarm/alarm.dart';
+import 'package:flutter/material.dart';
+import '../../main.dart';
+import '../../features/home/presentation/screens/notifications/notifications_page.dart';
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -36,8 +40,21 @@ class NotificationService {
       initializationSettings,
       onDidReceiveNotificationResponse: (details) {
         dev.log("Notification clicked: ${details.payload}");
+        _navigateToNotifications();
       },
     );
+
+    // Create Notification Channels for Android
+    if (Platform.isAndroid) {
+      await _createNotificationChannels();
+    }
+
+    // Check if app was opened from a notification when terminated (Local)
+    final NotificationAppLaunchDetails? notificationAppLaunchDetails =
+        await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+    if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
+      _navigateToNotifications();
+    }
 
     final prefs = await SharedPreferences.getInstance();
     final bool enabled = prefs.getBool('notifications_enabled') ?? true;
@@ -52,6 +69,63 @@ class NotificationService {
         await _scheduleStudyReminder(prefs);
       } else {
         dev.log("Notifications NOT granted");
+      }
+    }
+  }
+
+  void _navigateToNotifications() {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (navigatorKey.currentState != null) {
+        navigatorKey.currentState!.push(
+          MaterialPageRoute(builder: (_) => const NotificationsPage()),
+        );
+      }
+    });
+  }
+
+  Future<void> _createNotificationChannels() async {
+    const List<AndroidNotificationChannel> channels = [
+      AndroidNotificationChannel(
+        'fcm_foreground_channel',
+        'إشعارات عامة',
+        description: 'إشعارات مستلمة أثناء استخدام التطبيق',
+        importance: Importance.max,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('arabian_notification'),
+      ),
+      AndroidNotificationChannel(
+        'welcome_channel',
+        'التنبيهات العامة',
+        description: 'تنبيهات الترحيب والتحديثات',
+        importance: Importance.max,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('arabian_notification'),
+      ),
+      AndroidNotificationChannel(
+        'daily_reminder_channel_v4',
+        'تذكير المذاكرة اليومي',
+        description: 'تذكير يومي للمراجعة والمذاكرة',
+        importance: Importance.max,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('arabian_notification'),
+      ),
+      AndroidNotificationChannel(
+        'study_timer_channel_final',
+        'منبهات المذاكرة',
+        description: 'منبهات هامة لبدء وانتهاء جلسات المذاكرة',
+        importance: Importance.max,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('arabian_notification'),
+      ),
+    ];
+
+    final androidImplementation =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidImplementation != null) {
+      for (final channel in channels) {
+        await androidImplementation.createNotificationChannel(channel);
       }
     }
   }
@@ -100,13 +174,23 @@ class NotificationService {
     }
   }
 
-  Future<void> _saveToHistory(String title, String body) async {
+  Future<void> saveToHistory(String title, String body) async {
     final prefs = await SharedPreferences.getInstance();
     final String? data = prefs.getString('notifications_history');
     List history = [];
     if (data != null) {
       try { history = jsonDecode(data); } catch (_) {}
     }
+    
+    // Check if already exists to avoid duplicates
+    final bool alreadyExists = history.any((e) => 
+      e['title'] == title && 
+      e['body'] == body && 
+      (DateTime.parse(e['timestamp']).difference(DateTime.now()).inMinutes.abs() < 1)
+    );
+    
+    if (alreadyExists) return;
+
     history.insert(0, {
       'title': title,
       'body': body,
@@ -134,6 +218,7 @@ class NotificationService {
         showWhen: true,
         playSound: true,
         enableVibration: true,
+        sound: RawResourceAndroidNotificationSound('arabian_notification'),
         largeIcon: DrawableResourceAndroidBitmap('app_icon'),
       );
       const NotificationDetails platformChannelSpecifics =
@@ -147,7 +232,7 @@ class NotificationService {
           platformChannelSpecifics,
         );
         dev.log("Welcome notification shown successfully");
-        await _saveToHistory(title, body);
+        await saveToHistory(title, body);
         await prefs.setBool('first_time_notification', false);
       } catch (e) {
         dev.log("Error showing welcome notification: $e");
@@ -188,12 +273,14 @@ class NotificationService {
             priority: Priority.high,
             playSound: true,
             enableVibration: true,
+            sound: RawResourceAndroidNotificationSound('arabian_notification'),
             largeIcon: DrawableResourceAndroidBitmap('app_icon'),
           ),
           iOS: DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
+            sound: 'arabian_notification.wav',
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -238,12 +325,14 @@ class NotificationService {
               visibility: NotificationVisibility.public,
               playSound: true,
               enableVibration: true,
+              sound: RawResourceAndroidNotificationSound('arabian_notification'),
               largeIcon: DrawableResourceAndroidBitmap('app_icon'),
             ),
             iOS: DarwinNotificationDetails(
               presentAlert: true,
               presentBadge: true,
               presentSound: true,
+              sound: 'arabian_notification.wav',
               interruptionLevel: InterruptionLevel.critical,
             ),
           ),
@@ -251,7 +340,7 @@ class NotificationService {
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
         );
-        await _saveToHistory('بدء المذاكرة: $title', 'بدأت الجلسة الدراسية بنجاح.');
+        await saveToHistory('بدء المذاكرة: $title', 'بدأت الجلسة الدراسية بنجاح.');
       }
 
       // 2. Schedule End Notification (Only if in future)
@@ -276,12 +365,14 @@ class NotificationService {
               visibility: NotificationVisibility.public,
               playSound: true,
               enableVibration: true,
+              sound: RawResourceAndroidNotificationSound('arabian_notification'),
               largeIcon: DrawableResourceAndroidBitmap('app_icon'),
             ),
             iOS: DarwinNotificationDetails(
               presentAlert: true,
               presentBadge: true,
               presentSound: true,
+              sound: 'arabian_notification.wav',
               interruptionLevel: InterruptionLevel.critical,
             ),
           ),
@@ -289,7 +380,7 @@ class NotificationService {
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
         );
-        await _saveToHistory('انتهاء المذاكرة: $title', 'انتهت الجلسة الدراسية بنجاح.');
+        await saveToHistory('انتهاء المذاكرة: $title', 'انتهت الجلسة الدراسية بنجاح.');
       }
 
       dev.log("Dual notifications check complete for $title");
@@ -361,16 +452,34 @@ class NotificationService {
       dev.log('User declined or has not accepted FCM permission');
     }
 
+    // Handle initial message if app was terminated
+    fcm.RemoteMessage? initialMessage = await messaging.getInitialMessage();
+    if (initialMessage != null) {
+      _handleFcmMessage(initialMessage);
+      _navigateToNotifications();
+    }
+
+    // Handle messages when app is in background but not terminated
+    fcm.FirebaseMessaging.onMessageOpenedApp.listen((fcm.RemoteMessage message) {
+      _handleFcmMessage(message);
+      _navigateToNotifications();
+    });
+
     // Handle foreground messages
     fcm.FirebaseMessaging.onMessage.listen((fcm.RemoteMessage message) {
       dev.log('Got a message whilst in the foreground!');
-      dev.log('Message data: ${message.data}');
+      _handleFcmMessage(message);
 
       if (message.notification != null) {
-        dev.log('Message also contained a notification: ${message.notification}');
         _showForegroundNotification(message.notification!);
       }
     });
+  }
+
+  void _handleFcmMessage(fcm.RemoteMessage message) {
+    if (message.notification != null) {
+      saveToHistory(message.notification!.title ?? '', message.notification!.body ?? '');
+    }
   }
 
   Future<void> _showForegroundNotification(fcm.RemoteNotification notification) async {
@@ -383,6 +492,7 @@ class NotificationService {
         priority: Priority.high,
         playSound: true,
         enableVibration: true,
+        sound: RawResourceAndroidNotificationSound('arabian_notification'),
       );
     
     const DarwinNotificationDetails iosPlatformChannelSpecifics =
@@ -390,6 +500,7 @@ class NotificationService {
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      sound: 'arabian_notification.wav',
       interruptionLevel: InterruptionLevel.critical,
     );
     
