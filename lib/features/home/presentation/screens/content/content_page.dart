@@ -7,7 +7,6 @@ import 'package:mahj_saudi/features/home/data/repositories/educational_repositor
 import 'package:mahj_saudi/features/home/domain/entities/educational_node.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../../../../../core/services/local_storage_service.dart';
-import '../../../../../core/services/ad_service.dart';
 import 'package:get_it/get_it.dart';
 import 'cubit/content_cubit.dart';
 import 'cubit/content_state.dart';
@@ -17,7 +16,12 @@ class ContentPage extends StatelessWidget {
   final String parentId;
   final String title;
 
-  const ContentPage({super.key, this.node, required this.parentId, required this.title});
+  const ContentPage({
+    super.key,
+    this.node,
+    required this.parentId,
+    required this.title,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +40,12 @@ class ContentView extends StatefulWidget {
   final String parentId;
   final String title;
 
-  const ContentView({super.key, this.node, required this.parentId, required this.title});
+  const ContentView({
+    super.key,
+    this.node,
+    required this.parentId,
+    required this.title,
+  });
 
   @override
   State<ContentView> createState() => _ContentViewState();
@@ -44,20 +53,10 @@ class ContentView extends StatefulWidget {
 
 class _ContentViewState extends State<ContentView> {
   @override
-  void initState() {
-    super.initState();
-    // Show interstitial when arriving at a leaf screen (embedded PDF or links)
-    final hasContent = widget.node?.resources.isNotEmpty ?? false;
-    if (hasContent) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        GetIt.I<AdService>().showInterstitialAd(onAdDismissed: () {});
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final pdfRes = widget.node?.resources.where((r) => r.type == 'pdf').firstOrNull;
+    final pdfRes = widget.node?.resources
+        .where((r) => r.type == 'pdf')
+        .firstOrNull;
 
     return Scaffold(
       appBar: AppBar(
@@ -65,10 +64,14 @@ class _ContentViewState extends State<ContentView> {
         actions: [
           if (widget.node != null) ...[
             BlocBuilder<ContentCubit, ContentState>(
-              buildWhen: (previous, current) => previous.isFavorite != current.isFavorite,
+              buildWhen: (previous, current) =>
+                  previous.isFavorite != current.isFavorite,
               builder: (context, state) {
                 return IconButton(
-                  icon: Icon(state.isFavorite ? Icons.favorite : Icons.favorite_border, color: Colors.red),
+                  icon: Icon(
+                    state.isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: Colors.red,
+                  ),
                   onPressed: () {
                     context.read<ContentCubit>().toggleFavorite(widget.node!);
                   },
@@ -79,7 +82,9 @@ class _ContentViewState extends State<ContentView> {
               IconButton(
                 icon: const Icon(Icons.download),
                 onPressed: () async {
-                  await context.read<ContentCubit>().saveToLibrary(widget.node!);
+                  await context.read<ContentCubit>().saveToLibrary(
+                    widget.node!,
+                  );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("تمت الإضافة إلى مكتبتي")),
@@ -87,7 +92,7 @@ class _ContentViewState extends State<ContentView> {
                   }
                 },
               ),
-          ]
+          ],
         ],
       ),
       body: Directionality(
@@ -98,7 +103,7 @@ class _ContentViewState extends State<ContentView> {
               Expanded(child: _buildEmbeddedPdf(pdfRes.url))
             else if (widget.node != null && widget.node!.resources.isNotEmpty)
               ResourceViewer(node: widget.node!),
-            
+
             if (pdfRes == null)
               Expanded(
                 child: BlocBuilder<ContentCubit, ContentState>(
@@ -111,23 +116,27 @@ class _ContentViewState extends State<ContentView> {
                     }
                     if (state is ContentLoaded) {
                       if (state.items.isEmpty) {
-                        if (widget.node == null || widget.node!.resources.isEmpty) {
-                          return const Center(child: Text("لا توجد محتويات حالياً"));
+                        if (widget.node == null ||
+                            widget.node!.resources.isEmpty) {
+                          return const Center(
+                            child: Text("لا توجد محتويات حالياً"),
+                          );
                         }
                         return const SizedBox();
                       }
-                      
+
                       final firstItem = state.items.first;
-                      
+
                       if (firstItem.kind == 'grade') {
                         return GridView.builder(
                           padding: const EdgeInsets.all(16),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.85,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                          ),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 0.85,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                              ),
                           itemCount: state.items.length,
                           itemBuilder: (context, index) => GradeCard(
                             grade: state.items[index],
@@ -145,7 +154,9 @@ class _ContentViewState extends State<ContentView> {
 
                           return SemesterCard(
                             title: item.title,
-                            subtitle: hasResources ? "محتوى تعليمي متوفر" : "اضغط للمتابعة",
+                            subtitle: hasResources
+                                ? "محتوى تعليمي متوفر"
+                                : "اضغط للمتابعة",
                             onTap: () => _navigate(context, item),
                           );
                         },
@@ -186,11 +197,8 @@ class _ContentViewState extends State<ContentView> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ContentPage(
-          node: node,
-          parentId: node.id,
-          title: node.title,
-        ),
+        builder: (_) =>
+            ContentPage(node: node, parentId: node.id, title: node.title),
       ),
     );
   }

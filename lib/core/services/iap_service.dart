@@ -16,6 +16,7 @@ class IapService {
   static const String removeAdsId = 'remove_ads_premium';
   bool _isAdFree = false;
   bool get isAdFree => _isAdFree;
+  bool _purchasePending = false;
 
   final StreamController<bool> _adFreeStatusController = StreamController<bool>.broadcast();
   Stream<bool> get adFreeStatusStream => _adFreeStatusController.stream;
@@ -45,13 +46,22 @@ class IapService {
       
       if (purchaseDetails.status == PurchaseStatus.pending) {
         _isLoadingController.add(true);
+        _purchasePending = true;
       } else if (purchaseDetails.status == PurchaseStatus.error) {
         dev.log('IAP Error Object: ${purchaseDetails.error}');
         _isLoadingController.add(false);
+        _purchasePending = false;
         _showError('فشلت العملية: ${purchaseDetails.error?.message ?? "خطأ غير معروف"}');
+        if (purchaseDetails.pendingCompletePurchase) {
+          await _iap.completePurchase(purchaseDetails);
+        }
       } else if (purchaseDetails.status == PurchaseStatus.canceled) {
         _isLoadingController.add(false);
+        _purchasePending = false;
         dev.log('IAP: User canceled');
+        if (purchaseDetails.pendingCompletePurchase) {
+          await _iap.completePurchase(purchaseDetails);
+        }
       } else if (purchaseDetails.status == PurchaseStatus.purchased || 
                  purchaseDetails.status == PurchaseStatus.restored) {
         
@@ -64,6 +74,7 @@ class IapService {
           await _iap.completePurchase(purchaseDetails);
         }
         _isLoadingController.add(false);
+        _purchasePending = false;
       }
     }
   }
@@ -76,12 +87,20 @@ class IapService {
   }
 
   Future<void> buyAdRemoval() async {
+    if (_purchasePending) {
+      dev.log('IAP: Purchase already in progress, ignoring request.');
+      return;
+    }
+
     _isLoadingController.add(true);
     dev.log('IAP: Manual Buy Request for $removeAdsId');
 
     // Safety timeout to prevent stuck loader if Apple sheet fails to show
     Timer(const Duration(seconds: 25), () {
-      _isLoadingController.add(false);
+      if (_purchasePending) {
+        _isLoadingController.add(false);
+        _purchasePending = false;
+      }
     });
     
     try {
@@ -119,10 +138,25 @@ class IapService {
       // On iOS, this triggers the native system dialog
       await _iap.buyNonConsumable(purchaseParam: purchaseParam);
       
-    } catch (e) {
+    } on Exception catch (e) {
       dev.log('IAP Exception: $e');
-      _showError('حدث خطأ تقني: $e');
       _isLoadingController.add(false);
+      _purchasePending = false;
+
+      if (e.toString().contains('storekit_duplicate_product_object')) {
+        _showError('هناك عملية شراء معلقة بالفعل. جارٍ تحديث المتجر، يرجى المحاولة مرة أخرى خلال لحظات.');
+        // Trigger a restore to try and clear the stuck transaction queue
+        try {
+          await _iap.restorePurchases();
+        } catch (_) {}
+      } else {
+        _showError('حدث خطأ تقني: $e');
+      }
+    } catch (e) {
+      dev.log('IAP Unknown Error: $e');
+      _isLoadingController.add(false);
+      _purchasePending = false;
+      _showError('حدث خطأ غير متوقع');
     }
   }
 

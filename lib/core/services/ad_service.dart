@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'iap_service.dart';
 import 'dart:developer' as dev;
-import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 
 class AdService {
   static final AdService _instance = AdService._internal();
@@ -13,48 +12,44 @@ class AdService {
 
   AppOpenAd? _appOpenAd;
   InterstitialAd? _interstitialAd;
+  Timer? _appOpenAdRetryTimer;
+  Timer? _interstitialAdRetryTimer;
+  bool _isAppOpenAdLoading = false;
   bool _isInterstitialAdLoading = false;
-  Timer? _periodicAdTimer;
+  bool _isMobileAdsInitialized = false;
+  bool _showAppOpenAfterLoad = false;
+  bool _showInterstitialAfterLoad = false;
+  Timer? _appOpenAdTimer;
+  Timer? _interstitialAdTimer;
   bool _isAdShowing = false;
   GlobalKey<NavigatorState>? navigatorKey;
 
-  // Set this to false for production
-  static const bool useTestAds = false;
+  static const Duration appOpenAdInterval = Duration(minutes: 3);
 
-  // Test IDs for Android
-  static const String testAndroidBannerId = 'ca-app-pub-3940256099942544/6300978111';
-  static const String testAndroidInterstitialId = 'ca-app-pub-3940256099942544/1033173712';
-  static const String testAndroidAppOpenId = 'ca-app-pub-3940256099942544/9257395915';
+  static const String androidBannerId =
+      'ca-app-pub-3940256099942544/6300978111';
+  static const String androidInterstitialId =
+      'ca-app-pub-3940256099942544/1033173712';
+  static const String androidAppOpenId =
+      'ca-app-pub-3940256099942544/9257395921';
 
-  // Test IDs for iOS
-  static const String testIosBannerId = 'ca-app-pub-3940256099942544/2934735716';
-  static const String testIosInterstitialId = 'ca-app-pub-3940256099942544/4411468910';
-  static const String testIosAppOpenId = 'ca-app-pub-3940256099942544/5575463023';
+  static const String iosBannerId = 'ca-app-pub-6520884181780729/3297080273';
+  static const String iosInterstitialId =
+      'ca-app-pub-6520884181780729/7530120125';
+  static const String iosAppOpenId = 'ca-app-pub-6520884181780729/6093644324';
 
-  // IDs for Android
-  static const String androidBannerId = 'ca-app-pub-5716551354866412/3117135380';
-  static const String androidInterstitialId = 'ca-app-pub-5716551354866412/9376401917';
-  static const String androidAppOpenId = 'ca-app-pub-5716551354866412/3392467552';
-
-  // IDs for iOS
-  static const String iosBannerId = 'ca-app-pub-5716551354866412/2859095021';
-  static const String iosInterstitialId = 'ca-app-pub-5716551354866412/5803722482';
-  static const String iosAppOpenId = 'ca-app-pub-5716551354866412/8063320241';
-
-  String get bannerAdUnitId {
-    if (useTestAds) return Platform.isAndroid ? testAndroidBannerId : testIosBannerId;
-    return Platform.isAndroid ? androidBannerId : iosBannerId;
-  }
+  String get bannerAdUnitId =>
+      Platform.isAndroid ? androidBannerId : iosBannerId;
 
   String get interstitialAdUnitId {
-    if (useTestAds) return Platform.isAndroid ? testAndroidInterstitialId : testIosInterstitialId;
     return Platform.isAndroid ? androidInterstitialId : iosInterstitialId;
   }
 
   String get appOpenAdUnitId {
-    if (useTestAds) return Platform.isAndroid ? testAndroidAppOpenId : testIosAppOpenId;
     return Platform.isAndroid ? androidAppOpenId : iosAppOpenId;
   }
+
+  bool get isMobileAdsInitialized => _isMobileAdsInitialized;
 
   Future<void> init() async {
     if (IapService().isAdFree) {
@@ -62,35 +57,16 @@ class AdService {
       return;
     }
 
-    // Request Tracking Transparency for iOS before initializing Ads
-    if (Platform.isIOS) {
-      try {
-        // Wait a bit for the app to be stable
-        await Future.delayed(const Duration(milliseconds: 1500));
-        var status = await AppTrackingTransparency.trackingAuthorizationStatus;
-        if (status == TrackingStatus.notDetermined) {
-          dev.log('Requesting ATT authorization...');
-          status = await AppTrackingTransparency.requestTrackingAuthorization();
-          dev.log('ATT authorization status: $status');
-        }
-      } catch (e) {
-        dev.log('Error requesting ATT: $e');
-      }
-    }
-
     // Listen for ad-free status changes
     IapService().adFreeStatusStream.listen((isAdFree) {
       if (isAdFree) {
-        _periodicAdTimer?.cancel();
-        _appOpenAd?.dispose();
-        _appOpenAd = null;
-        _interstitialAd?.dispose();
-        _interstitialAd = null;
+        _clearAds();
         dev.log('Ad-free enabled: Cleared all ads and timers');
       }
     });
 
     await MobileAds.instance.initialize();
+    _isMobileAdsInitialized = true;
     loadAppOpenAd(showAfterLoad: true);
     loadInterstitialAd();
     startPeriodicAds();
@@ -98,11 +74,13 @@ class AdService {
 
   void startPeriodicAds() {
     if (IapService().isAdFree) return;
-    _periodicAdTimer?.cancel();
-    _periodicAdTimer = Timer.periodic(const Duration(minutes: 3), (timer) {
+    _appOpenAdTimer?.cancel();
+    _interstitialAdTimer?.cancel();
+
+    _appOpenAdTimer = Timer.periodic(appOpenAdInterval, (timer) {
       if (!_isAdShowing && !IapService().isAdFree) {
         dev.log("Triggering 3-minute periodic App Open ad");
-        showAppOpenAdIfAvailable();
+        showAppOpenAdIfAvailable(loadAndShowWhenReady: true);
       } else if (IapService().isAdFree) {
         timer.cancel();
       }
@@ -110,7 +88,38 @@ class AdService {
   }
 
   void dispose() {
-    _periodicAdTimer?.cancel();
+    _clearAds();
+  }
+
+  void _clearAds() {
+    _appOpenAdTimer?.cancel();
+    _interstitialAdTimer?.cancel();
+    _appOpenAdRetryTimer?.cancel();
+    _interstitialAdRetryTimer?.cancel();
+    _appOpenAd?.dispose();
+    _interstitialAd?.dispose();
+    _appOpenAd = null;
+    _interstitialAd = null;
+    _isAppOpenAdLoading = false;
+    _isInterstitialAdLoading = false;
+    _showAppOpenAfterLoad = false;
+    _showInterstitialAfterLoad = false;
+  }
+
+  bool get _canRequestAds =>
+      _isMobileAdsInitialized && !IapService().isAdFree && !_isAdShowing;
+
+  void _retryAppOpenLoad() {
+    _appOpenAdRetryTimer?.cancel();
+    _appOpenAdRetryTimer = Timer(const Duration(seconds: 8), loadAppOpenAd);
+  }
+
+  void _retryInterstitialLoad() {
+    _interstitialAdRetryTimer?.cancel();
+    _interstitialAdRetryTimer = Timer(
+      const Duration(seconds: 8),
+      loadInterstitialAd,
+    );
   }
 
   void _showErrorDialog(String type, dynamic error) {
@@ -120,7 +129,20 @@ class AdService {
 
   // --- App Open Ad ---
   void loadAppOpenAd({bool showAfterLoad = false}) {
-    if (IapService().isAdFree) return;
+    if (IapService().isAdFree || !_isMobileAdsInitialized) return;
+    if (showAfterLoad) {
+      _showAppOpenAfterLoad = true;
+    }
+    if (_appOpenAd != null) {
+      if (showAfterLoad) {
+        showAppOpenAdIfAvailable();
+      }
+      return;
+    }
+    if (_isAppOpenAdLoading) return;
+
+    _isAppOpenAdLoading = true;
+    _appOpenAdRetryTimer?.cancel();
     AppOpenAd.load(
       adUnitId: appOpenAdUnitId,
       request: const AdRequest(),
@@ -128,58 +150,73 @@ class AdService {
         onAdLoaded: (ad) {
           dev.log('AppOpenAd loaded');
           _appOpenAd = ad;
-          if (showAfterLoad) {
+          _isAppOpenAdLoading = false;
+          if (_showAppOpenAfterLoad) {
+            _showAppOpenAfterLoad = false;
             showAppOpenAdIfAvailable();
           }
         },
         onAdFailedToLoad: (error) {
           dev.log('AppOpenAd failed to load: $error');
+          _isAppOpenAdLoading = false;
+          _appOpenAd = null;
           _showErrorDialog('App Open Load', error);
+          _retryAppOpenLoad();
         },
       ),
     );
   }
 
-  void showAppOpenAdIfAvailable() {
-    if (_isAdShowing || IapService().isAdFree) return;
+  void showAppOpenAdIfAvailable({bool loadAndShowWhenReady = false}) {
+    if (!_canRequestAds) return;
     if (_appOpenAd == null) {
       dev.log('AppOpenAd not ready, loading new one...');
-      loadAppOpenAd();
+      loadAppOpenAd(showAfterLoad: loadAndShowWhenReady);
       return;
     }
+
     dev.log('Attempting to show AppOpenAd...');
-    _appOpenAd!.fullScreenContentCallback = FullScreenContentCallback(
+    final ad = _appOpenAd!;
+    _appOpenAd = null;
+    _isAdShowing = true;
+    ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (ad) {
-        _isAdShowing = true;
         dev.log('AppOpenAd showing on screen');
       },
       onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
         _isAdShowing = false;
-        _appOpenAd = null;
         loadAppOpenAd();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
         _isAdShowing = false;
-        _appOpenAd = null;
         loadAppOpenAd();
         _showErrorDialog('App Open Show', error);
       },
     );
-    _appOpenAd!.show();
+    ad.show();
   }
 
   // --- Banner Ad ---
-  BannerAd? createBannerAd() {
-    if (IapService().isAdFree) return null;
+  BannerAd? createBannerAd({
+    VoidCallback? onLoaded,
+    void Function(LoadAdError error)? onFailedToLoad,
+  }) {
+    if (IapService().isAdFree || !_isMobileAdsInitialized) return null;
     return BannerAd(
       adUnitId: bannerAdUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
-        onAdLoaded: (ad) => dev.log('BannerAd loaded'),
+        onAdLoaded: (ad) {
+          dev.log('BannerAd loaded');
+          onLoaded?.call();
+        },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
           dev.log('BannerAd failed to load: $error');
+          onFailedToLoad?.call(error);
           _showErrorDialog('Banner Load', error);
         },
       ),
@@ -187,10 +224,21 @@ class AdService {
   }
 
   // --- Interstitial Ad ---
-  void loadInterstitialAd() {
-    if (IapService().isAdFree) return;
+  void loadInterstitialAd({bool showAfterLoad = false}) {
+    if (IapService().isAdFree || !_isMobileAdsInitialized) return;
+    if (showAfterLoad) {
+      _showInterstitialAfterLoad = true;
+    }
+    if (_interstitialAd != null) {
+      if (showAfterLoad) {
+        showInterstitialAd(onAdDismissed: () {});
+      }
+      return;
+    }
     if (_isInterstitialAdLoading) return;
+
     _isInterstitialAdLoading = true;
+    _interstitialAdRetryTimer?.cancel();
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
       request: const AdRequest(),
@@ -199,19 +247,27 @@ class AdService {
           dev.log('InterstitialAd loaded');
           _interstitialAd = ad;
           _isInterstitialAdLoading = false;
+          if (_showInterstitialAfterLoad) {
+            _showInterstitialAfterLoad = false;
+            showInterstitialAd(onAdDismissed: () {});
+          }
         },
         onAdFailedToLoad: (error) {
           dev.log('InterstitialAd failed to load: $error');
           _isInterstitialAdLoading = false;
           _interstitialAd = null;
           _showErrorDialog('Interstitial Load', error);
+          _retryInterstitialLoad();
         },
       ),
     );
   }
 
-  void showInterstitialAd({required Function onAdDismissed}) {
-    if (_isAdShowing || IapService().isAdFree) {
+  void showInterstitialAd({
+    required Function onAdDismissed,
+    bool loadAndShowWhenReady = false,
+  }) {
+    if (!_canRequestAds) {
       onAdDismissed();
       return;
     }
@@ -219,30 +275,29 @@ class AdService {
     if (_interstitialAd == null) {
       dev.log('InterstitialAd not ready, proceeding to content.');
       onAdDismissed();
-      loadInterstitialAd();
+      loadInterstitialAd(showAfterLoad: loadAndShowWhenReady);
       return;
     }
 
-    _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdShowedFullScreenContent: (ad) {
-        _isAdShowing = true;
-      },
+    final ad = _interstitialAd!;
+    _interstitialAd = null;
+    _isAdShowing = true;
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (ad) {},
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         _isAdShowing = false;
-        _interstitialAd = null;
         onAdDismissed();
         loadInterstitialAd();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         ad.dispose();
         _isAdShowing = false;
-        _interstitialAd = null;
         onAdDismissed();
         loadInterstitialAd();
         _showErrorDialog('Interstitial Show', error);
       },
     );
-    _interstitialAd!.show();
+    ad.show();
   }
 }
