@@ -24,8 +24,7 @@ class AdService {
   bool _isAdShowing = false;
   GlobalKey<NavigatorState>? navigatorKey;
 
-  static const Duration appOpenAdInterval = Duration(seconds: 40);
-  static const Duration interstitialAdInterval = Duration(seconds: 90);
+  static const Duration appOpenAdInterval = Duration(minutes: 3);
 
   static const String androidBannerId =
       'ca-app-pub-3940256099942544/6300978111';
@@ -80,17 +79,8 @@ class AdService {
 
     _appOpenAdTimer = Timer.periodic(appOpenAdInterval, (timer) {
       if (!_isAdShowing && !IapService().isAdFree) {
-        dev.log("Triggering 40-second periodic App Open ad");
+        dev.log("Triggering 3-minute periodic App Open ad");
         showAppOpenAdIfAvailable(loadAndShowWhenReady: true);
-      } else if (IapService().isAdFree) {
-        timer.cancel();
-      }
-    });
-
-    _interstitialAdTimer = Timer.periodic(interstitialAdInterval, (timer) {
-      if (!_isAdShowing && !IapService().isAdFree) {
-        dev.log("Triggering 90-second periodic Interstitial ad");
-        showInterstitialAd(onAdDismissed: () {}, loadAndShowWhenReady: true);
       } else if (IapService().isAdFree) {
         timer.cancel();
       }
