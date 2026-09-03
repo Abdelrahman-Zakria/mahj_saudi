@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../../../../../core/services/iap_service.dart';
+import '../../../../../core/services/rate_service.dart';
 import '../exams/exams_page.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/services/local_storage_service.dart';
@@ -45,8 +46,8 @@ class MoreView extends StatelessWidget {
               icon: const Icon(Icons.share),
               onPressed: () {
                 final box = context.findRenderObject() as RenderBox?;
-                final rect = box != null 
-                    ? box.localToGlobal(Offset.zero) & box.size 
+                final rect = box != null
+                    ? box.localToGlobal(Offset.zero) & box.size
                     : null;
                 context.read<MoreCubit>().shareApp(sharePositionOrigin: rect);
               },
@@ -74,27 +75,36 @@ class MoreView extends StatelessWidget {
                         title: "الاختبارات",
                         subtitle: "نماذج اختبارات لجميع المواد",
                         onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const ExamsPage()));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ExamsPage(),
+                            ),
+                          );
                         },
                       ),
                       BlocBuilder<MoreCubit, MoreState>(
                         builder: (context, state) {
                           return _buildItem(
-                            icon: state.notificationsEnabled 
-                              ? Icons.notifications_active_outlined 
-                              : Icons.notifications_off_outlined,
+                            icon: state.notificationsEnabled
+                                ? Icons.notifications_active_outlined
+                                : Icons.notifications_off_outlined,
                             title: "الاشعارات",
-                            subtitle: state.notificationsEnabled ? "مفعلة" : "معطلة",
+                            subtitle: state.notificationsEnabled
+                                ? "مفعلة"
+                                : "معطلة",
                             trailing: Switch(
                               value: state.notificationsEnabled,
                               activeThumbColor: AppTheme.primaryGreen,
                               onChanged: (value) {
-                              cubit.toggleNotifications(value);
+                                cubit.toggleNotifications(value);
+                              },
+                            ),
+                            onTap: () {
+                              cubit.toggleNotifications(
+                                !state.notificationsEnabled,
+                              );
                             },
-                          ),
-                          onTap: () {
-                            cubit.toggleNotifications(!state.notificationsEnabled);
-                          },
                           );
                         },
                       ),
@@ -104,9 +114,10 @@ class MoreView extends StatelessWidget {
                           title: "مشاركة التطبيق",
                           subtitle: "شارك الفائدة مع زملائك",
                           onTap: () {
-                            final box = context.findRenderObject() as RenderBox?;
-                            final rect = box != null 
-                                ? box.localToGlobal(Offset.zero) & box.size 
+                            final box =
+                                context.findRenderObject() as RenderBox?;
+                            final rect = box != null
+                                ? box.localToGlobal(Offset.zero) & box.size
                                 : null;
                             cubit.shareApp(sharePositionOrigin: rect);
                           },
@@ -124,8 +135,8 @@ class MoreView extends StatelessWidget {
                         icon: Icons.star_rounded,
                         title: "قيمنا",
                         subtitle: "رأيك يهمنا لتطوير التطبيق",
-                        onTap: () {
-                          cubit.launchStore();
+                        onTap: () async {
+                          await RateService().requestNativeReview();
                         },
                       ),
                       _buildItem(
@@ -136,7 +147,9 @@ class MoreView extends StatelessWidget {
                           await GetIt.I<IapService>().restorePurchases();
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("تم بدء استعادة المشتريات...")),
+                              const SnackBar(
+                                content: Text("تم بدء استعادة المشتريات..."),
+                              ),
                             );
                           }
                         },
@@ -147,17 +160,17 @@ class MoreView extends StatelessWidget {
                         initialData: false,
                         builder: (context, loadingSnapshot) {
                           final isLoading = loadingSnapshot.data ?? false;
-                          
+
                           return StreamBuilder<bool>(
                             stream: GetIt.I<IapService>().adFreeStatusStream,
                             initialData: GetIt.I<IapService>().isAdFree,
                             builder: (context, adFreeSnapshot) {
                               final isAdFree = adFreeSnapshot.data ?? false;
-                              
+
                               if (isAdFree) {
                                 return _buildAdFreeItem();
                               }
-                              
+
                               return Stack(
                                 children: [
                                   _buildRemoveAdsItem(),
@@ -166,10 +179,14 @@ class MoreView extends StatelessWidget {
                                       child: Container(
                                         decoration: BoxDecoration(
                                           color: Colors.black26,
-                                          borderRadius: BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                         ),
                                         child: const Center(
-                                          child: CircularProgressIndicator(color: Colors.white),
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -198,7 +215,7 @@ class MoreView extends StatelessWidget {
 
   Widget _buildProfileHeader() {
     return Stack(
-      alignment: .topCenter,
+      alignment: Alignment.topCenter,
       children: [
         Container(
           height: 120,
@@ -218,7 +235,7 @@ class MoreView extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha:0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -229,7 +246,10 @@ class MoreView extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.primaryGreen.withValues(alpha:0.1), width: 4),
+                  border: Border.all(
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                    width: 4,
+                  ),
                 ),
                 child: CircleAvatar(
                   radius: 45,
@@ -267,7 +287,7 @@ class MoreView extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withValues(alpha:0.2),
+            color: Colors.orange.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -290,7 +310,11 @@ class MoreView extends StatelessWidget {
                     color: Colors.white24,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.block_flipped, color: Colors.white, size: 24),
+                  child: const Icon(
+                    Icons.block_flipped,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -310,7 +334,7 @@ class MoreView extends StatelessWidget {
                         "استمتع بتجربة بدون إعلانات مقابل \$3 فقط",
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha:0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -346,7 +370,11 @@ class MoreView extends StatelessWidget {
                 color: Colors.green.shade100,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.verified_rounded, color: Colors.green, size: 24),
+              child: const Icon(
+                Icons.verified_rounded,
+                color: Colors.green,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 16),
             const Expanded(
@@ -364,10 +392,7 @@ class MoreView extends StatelessWidget {
                   SizedBox(height: 2),
                   Text(
                     "شكراً لدعمك لنا!",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.green,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.green),
                   ),
                 ],
               ),
@@ -392,7 +417,7 @@ class MoreView extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha:0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -410,7 +435,7 @@ class MoreView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withValues(alpha:0.1),
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, color: AppTheme.primaryGreen, size: 24),
@@ -439,11 +464,12 @@ class MoreView extends StatelessWidget {
                     ],
                   ),
                 ),
-                trailing ?? const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 16,
-                  color: Colors.grey,
-                ),
+                trailing ??
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
               ],
             ),
           ),

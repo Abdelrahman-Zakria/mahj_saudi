@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:mahj_saudi/features/home/presentation/widgets/semester_card.dart';
 import 'package:mahj_saudi/features/home/data/repositories/educational_repository_impl.dart';
 import 'package:mahj_saudi/core/theme/app_theme.dart';
 import 'package:mahj_saudi/features/home/presentation/widgets/custom_bottom_nav.dart';
-import 'package:mahj_saudi/core/services/ad_service.dart';
 import 'cubit/home_cubit.dart';
 import 'cubit/home_state.dart';
 import '../content/content_page.dart';
@@ -25,31 +22,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 2; // Home is index 2
-  BannerAd? _bannerAd;
-  bool _isBannerAdLoaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBannerAd();
-  }
-
-  void _loadBannerAd() {
-    _bannerAd = GetIt.I<AdService>().createBannerAd();
-    _bannerAd?.load().then((_) {
-      if (mounted) {
-        setState(() {
-          _isBannerAdLoaded = true;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _bannerAd?.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,24 +34,7 @@ class _HomePageState extends State<HomePage> {
     ];
 
     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(child: pages[_currentIndex]),
-          if (_isBannerAdLoaded && _bannerAd != null)
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: SafeArea(
-                top: false,
-                child: SizedBox(
-                  width: _bannerAd!.size.width.toDouble(),
-                  height: _bannerAd!.size.height.toDouble(),
-                  child: AdWidget(ad: _bannerAd!),
-                ),
-              ),
-            ),
-        ],
-      ),
+      body: pages[_currentIndex],
       bottomNavigationBar: CustomBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -103,29 +58,34 @@ class _HomeContentState extends State<_HomeContent> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => HomeCubit(
-        context.read<EducationalRepositoryImpl>(),
-      )..loadRootSemesters(),
+      create: (context) =>
+          HomeCubit(context.read<EducationalRepositoryImpl>())
+            ..loadRootSemesters(),
       child: Scaffold(
         appBar: AppBar(
           title: const Text("منهجي السعودي"),
           actions: [
             Builder(
               builder: (context) => IconButton(
-                icon: const Icon(Icons.notifications_none), 
+                icon: const Icon(Icons.notifications_none),
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsPage(),
+                    ),
+                  );
                 },
               ),
             ),
           ],
           leading: Builder(
             builder: (context) => IconButton(
-              icon: const Icon(Icons.share), 
+              icon: const Icon(Icons.share),
               onPressed: () {
                 final box = context.findRenderObject() as RenderBox?;
-                final rect = box != null 
-                    ? box.localToGlobal(Offset.zero) & box.size 
+                final rect = box != null
+                    ? box.localToGlobal(Offset.zero) & box.size
                     : null;
                 context.read<HomeCubit>().shareApp(sharePositionOrigin: rect);
               },
@@ -156,18 +116,18 @@ class _HomeContentState extends State<_HomeContent> {
                           final item = state.items[index];
                           return SemesterCard(
                             title: item.title,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ContentPage(
-                                          node: item,
-                                          parentId: item.id,
-                                          title: item.title,
-                                        ),
-                                      ),
-                                    );
-                                  },
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ContentPage(
+                                    node: item,
+                                    parentId: item.id,
+                                    title: item.title,
+                                  ),
+                                ),
+                              );
+                            },
                           );
                         },
                       );
@@ -198,7 +158,11 @@ class _HomeContentState extends State<_HomeContent> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha:0.1), blurRadius: 10, offset: const Offset(0, 5)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
               ],
             ),
             child: ClipRRect(
@@ -209,7 +173,10 @@ class _HomeContentState extends State<_HomeContent> {
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) => const Text(
                   "Mnhaji",
-                  style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryGreen),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryGreen,
+                  ),
                 ),
               ),
             ),
@@ -224,9 +191,9 @@ class _HomeContentState extends State<_HomeContent> {
               child: Text(
                 "مرحبًا بك! يرجى اختيار الفصل الدراسي الذي تريده لتتمكن من تصفح جميع المواد الخاصة بك",
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -238,7 +205,9 @@ class _HomeContentState extends State<_HomeContent> {
             alignment: Alignment.centerRight,
             child: Text(
               "الفصول الدراسية",
-              style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 22),
+              style: Theme.of(
+                context,
+              ).textTheme.displayLarge?.copyWith(fontSize: 22),
             ),
           ),
         ),
