@@ -51,6 +51,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       history.insert(0, {
         'title': message.notification!.title,
         'body': message.notification!.body,
+        'image': message.notification!.android?.imageUrl ?? message.notification!.apple?.imageUrl,
         'timestamp': DateTime.now().toIso8601String(),
       });
       if (history.length > 50) history.removeLast();

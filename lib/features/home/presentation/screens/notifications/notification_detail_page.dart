@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:flutter_linkify/flutter_linkify.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../../../core/theme/app_theme.dart';
 
 class NotificationDetailPage extends StatelessWidget {
@@ -7,10 +10,18 @@ class NotificationDetailPage extends StatelessWidget {
 
   const NotificationDetailPage({super.key, required this.notification});
 
+  Future<void> _onOpen(LinkableElement link) async {
+    final Uri url = Uri.parse(link.url);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch ${link.url}');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final timestamp = DateTime.parse(notification['timestamp']);
     final formattedDate = intl.DateFormat('yyyy/MM/dd hh:mm a').format(timestamp);
+    final String? imageUrl = notification['image'];
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -41,6 +52,24 @@ class NotificationDetailPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (imageUrl != null && imageUrl.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(15),
+                          child: CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              height: 200,
+                              color: Colors.grey[100],
+                              child: const Center(child: CircularProgressIndicator()),
+                            ),
+                            errorWidget: (context, url, error) => const SizedBox(),
+                          ),
+                        ),
+                      ),
                     Row(
                       children: [
                         Container(
@@ -74,12 +103,18 @@ class NotificationDetailPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      notification['body'] ?? '',
+                    Linkify(
+                      onOpen: _onOpen,
+                      text: notification['body'] ?? '',
                       style: const TextStyle(
                         fontSize: 16,
                         height: 1.6,
                         color: AppTheme.textDark,
+                        fontFamily: 'Cairo', // Ensure it uses your theme font
+                      ),
+                      linkStyle: const TextStyle(
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline,
                       ),
                     ),
                     const SizedBox(height: 24),

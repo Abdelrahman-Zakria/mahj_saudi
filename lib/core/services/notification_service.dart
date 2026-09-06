@@ -174,7 +174,7 @@ class NotificationService {
     }
   }
 
-  Future<void> saveToHistory(String title, String body) async {
+  Future<void> saveToHistory(String title, String body, {String? imageUrl}) async {
     final prefs = await SharedPreferences.getInstance();
     final String? data = prefs.getString('notifications_history');
     List history = [];
@@ -194,6 +194,7 @@ class NotificationService {
     history.insert(0, {
       'title': title,
       'body': body,
+      'image': imageUrl,
       'timestamp': DateTime.now().toIso8601String(),
     });
     if (history.length > 50) history.removeLast();
@@ -478,7 +479,11 @@ class NotificationService {
 
   void _handleFcmMessage(fcm.RemoteMessage message) {
     if (message.notification != null) {
-      saveToHistory(message.notification!.title ?? '', message.notification!.body ?? '');
+      saveToHistory(
+        message.notification!.title ?? '', 
+        message.notification!.body ?? '',
+        imageUrl: message.notification!.android?.imageUrl ?? message.notification!.apple?.imageUrl,
+      );
     }
   }
 
